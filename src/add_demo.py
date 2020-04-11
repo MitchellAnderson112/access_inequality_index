@@ -8,53 +8,35 @@ def import_csv(db):
     '''
     import a csv into the postgres db
     '''
-    if state=='md':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '510'
-    elif state == 'wa':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '033'
-    elif state == 'nc':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '129'
-    elif state == 'il':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '031'
-    elif state == 'tx':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '201'
-    elif state == 'or':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '051'
-    elif state == 'ga':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '121'
-    elif state == 'la':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '071'
-    elif state == 'mi':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '163'
-    elif state == 'co':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '031'
-    elif state == 'fl':
-        file_name = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
-        county = '086'
-    #
-    table_name = 'demograph'
+    county_codes = {'md':'510', 'wa':'033','nc':'129','il':'031','tx':'201',
+                    'or':'051','ga':'121','la':'071','mi':'163','co':'031','fl':'086'}
+    county = county_codes[state]
 
     # import distances
     dist = pd.read_sql("SELECT id_orig, distance FROM nearest_dist WHERE service = 'supermarket'", db['con'])
     dist = dist.loc[dist['distance']!=0]
     dist['geoid10'] = dist['id_orig']
-    # import demographic
-    demo = pd.read_csv(file_name, dtype = {'STATEA':str, 'COUNTYA':str,'TRACTA':str,'BLOCKA':str, 'H7X001':int, 'H7X002':int, 'H7X003':int, 'H7X004':int, 'H7X005':int, 'H7Y003':int})
+    # import race and ethnicity
+    file_name = '/file/Research/CivilSystems/data/usa/{}/{}/demo/demo.csv'.format(state, context['city_code'])
+    demo = pd.read_csv(file_name, dtype = {'STATEA':str, 'COUNTYA':str,'TRACTA':str,'BLKGRPA':str,'BLOCKA':str, 'H7X001':int, 'H7X002':int, 'H7X003':int, 'H7X004':int, 'H7X005':int, 'H7Y003':int})
     demo = demo.loc[demo['H7X001']!=0] # remove zero pop blocks
-    demo['geoid10'] = demo['geoid10'] = demo['STATEA'] + demo['COUNTYA'] + demo['TRACTA'] + demo['BLOCKA']
+    demo['geoid10'] = demo['STATEA'] + demo['COUNTYA'] + demo['TRACTA'] + demo['BLOCKA']
+    demo['id_bg'] = demo['STATEA'] + demo['COUNTYA'] + demo['TRACTA'] + demo['BLKGRPA']
+
+    # import income, poverty, and vehicle ownership
+    file_name = '/file/Research/CivilSystems/data/usa/{}/ds176_20105_2010_blck_grp.csv'.format(state)
+    # JOIE001 - median household income
+    # JSNE001 - total housing units; JSNE003 - owner occupied houses with no vehicles, JDNE010 - renter occupied, no vehicles
+    # JOCE001 - block group population; JOCE002 - poverty ratio < 0.5; JOCE003 - poverty ratio [0.5,1)
+    demo_bg = pd.read_csv(file_name, dtype = {'STATEA':str, 'COUNTYA':str,'TRACTA':str,'BLKGRPA':str, 'JOIE001':float, 'JOCE001':int, 'JOCE002':int, 'JOCE003':int, 'JSNE001':int, 'JSNE003':int, 'JSNE010':int})
+    demo_bg['id_bg'] = demo_bg['STATEA'] + demo_bg['COUNTYA'] + demo_bg['TRACTA'] + demo_bg['BLKGRPA']
+
 
     # join the dataframes
-    dem_cols = ['geoid10','H7X001', 'H7X002', 'H7X003', 'H7X004', 'H7X005', 'H7Y003']
+    demo = pd.merge(demo, demo_bg, on='id_bg', how='inner')
+    dem_cols = ['geoid10','H7X001', 'H7X002', 'H7X003', 'H7X004', 'H7X005',
+                'H7Y003', 'JOIE001', 'JOCE001', 'JOCE002', 'JOCE003', 'JSNE001',
+                'JSNE003', 'JSNE010']
     distxdem = pd.merge(dist[['geoid10','distance']], demo[dem_cols], on='geoid10', how='inner')
 
     # upload to sql
