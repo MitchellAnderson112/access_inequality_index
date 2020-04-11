@@ -30,17 +30,20 @@ h = w/1.618
 
 def main():
     '''Creates dataframe and adds data for each city before plotting and exporting CSV'''
-    city, data = get_data() # data is a dictionary of dataframes for each state
-    kappa_data = get_kappa_data(data)
-    kappa = inequality_function.calc_kappa(kappa_data, beta) # kappa is based on the distances from ALL states and the beta provided
+    city, data = get_data()
+    # kappa is based on the distances from ALL states and the beta provided
+    kappa = determine_kappa(data, beta)
+    # initialize dataframe
     results = pd.DataFrame(np.nan, index=np.arange(10), columns=['State','City', 'Kappa', 'Beta', 'Epsilon', 'Kolm-Pollak EDE', 'Atkinson EDE', 'Atkinson Adjusted EDE', 'Kolm-Pollak Index', 'Atkinson Index', 'Atkinson Adjusted Index', 'Gini Index', 'Distribution Mean', 'Distribution Max', 'Distribution Standard Deviation', 'Distribution Coefficient of Variation'])
     results.State = states
     results = results.set_index('State')
+    # evaluate equality
     for state in states:
         # Gets the df for specific state
         df = data['{}_data'.format(state)].copy()
         # drop data that has 0 weight
         df = df.iloc[np.array(df[weight_code]) > 0].copy()
+        # invert values for atkinson
         a = list(df.distance)
         at = list(1/df.distance)
         weight = list(df[weight_code])
@@ -82,8 +85,9 @@ def get_data():
         data['{}_data'.format(state)] = df # replaces the dataframe in the dictionary
     return(city, data)
 
-def get_kappa_data(data):
-    '''takes dictionary of dataframes, and global beta, minimised the sum of squares for all data to return kappa'''
+def determine_kappa(data, beta):
+    '''takes dictionary of dataframes and beta, minimised the sum of squares for all data to return kappa'''
+    # prepare the data
     kappa_data = [] # init empty list for each distance
     for state in states:
         df = data['{}_data'.format(state)]
@@ -92,63 +96,9 @@ def get_kappa_data(data):
             for pop in range(int(df['H7X001'].iloc[count])): #adds the distance to the list as many times as there are people in the block
                 kappa_data.append(i)
             count += 1
-    return(kappa_data)
-
-def get_gini(df):
-    '''Calculates area between x=y line and the created lorenz curve and returns the gini index'''
-    dist_tot = df['distance'].sum() # gives the total distance
-    pop_tot = df['H7X001'].sum() #gives total population
-    df = df.sort_values(by='distance') #sorts by distance
-    df['pop_perc'] = df['H7X001'].cumsum()/pop_tot*100 #assigns percentage of population
-    df['dist_perc'] = df['distance'].cumsum()/dist_tot*100 # assigns percentage of distance
-    area_tot = simps(np.arange(0,101,1), dx=1) #Calculates the area under the x=y curve
-    area_real = simps(df['dist_perc'], df['pop_perc']) # calculates the area under the lorenz curve
-    area_diff = area_tot - area_real # gives area between lorenz and x=y
-    gini = area_diff/area_tot
-    gini = round(gini, 3)
-    return(gini)
-
-def get_at_adj(df):
-    '''takes a dataframe with pop and dist, uses beta to calc EDE and index'''
-    at_sum = 0 # init sum
-    count = 0
-    N = df['H7X001'].sum() #total population
-    x_mean = np.average(df['distance'], weights = df['H7X001']) #gives weighted mean for the distance
-    for i in df['distance']:
-        at_sum += (i**(1-beta))*df['H7X001'].iloc[count] #sum function from atkinson eqn
-        count += 1
-    at_ede = (at_sum/N)**(1/(1-beta)) # EDE
-    at_ind = (at_ede/x_mean)-1 # Index
-    return(at_ind, at_ede)
-
-def get_at(df):
-    '''takes a dataframe with pop and dist, returns normal atkinson metrics for a "bad" distribution by inverting the distance value'''
-    at_sum = 0 # init sum
-    N = df['H7X001'].sum() # total pop
-    x_mean = np.average(df['distance'], weights = df['H7X001']) # mean of dist weighted by pop
-    count = 0
-    for i in df['distance']:
-        i = 1/i #inverts distance
-        at_sum += (i**(1-epsilon))*df['H7X001'].iloc[count] #atkinson eqn sum
-        count += 1
-    at_ede = (at_sum/N)**(1/(1-epsilon)) #EDE
-    at_ind = 1 - (at_ede/x_mean) # Index
-    return(at_ind, at_ede)
-
-def get_kolm(df, kappa):
-    '''takes a dataframe with pop and dist, and a kappa value. returns Kolm-Pollak EDE and Index'''
-    N = df['H7X001'].sum() # total pop
-    x_mean = np.average(df['distance'], weights = df['H7X001']) # mean of dist weighted by pop
-    sum_ede = 0 # init sum
-    sum_ii = 0 # init sum
-    count = 0
-    for x_n in df['distance']:
-        sum_ede += np.exp(-kappa*x_n)*df['H7X001'].iloc[count]
-        sum_ii += np.exp(-kappa*(x_n-x_mean))*df['H7X001'].iloc[count]
-        count += 1
-    kp_ede = (-1/kappa)*np.log(sum_ede/N) #EDE
-    kp_ind = -(1/kappa)*np.log(sum_ii/N) # Index
-    return(kp_ind, kp_ede)
+    # calculate the kappa
+    kappa = inequality_function.calc_kappa(kappa_data, beta)
+    return(kappa)
 
 def get_stats(df):
     '''provides Mean, Max, STD, COV for distribution of dist and pop'''
