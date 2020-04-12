@@ -6,7 +6,7 @@ Inputs:
     beta (optional, default = -0.5)
     if the distribution is of an undesirable (e.g., exposure)
         beta = int < 0
-    if it is a desirable property (e.g., income) 
+    if it is a desirable property (e.g., income)
         beta = int > 0
     epsilon (optional, default = 0.5) = int > 0
 Output:
@@ -51,6 +51,24 @@ def kolm_pollak_index(a, beta = -0.5, kappa = None, weight = None):
     inequality_index = kolm_pollak_ede(a, beta = beta, kappa = kappa, weight = weight)
 
     return(inequality_index)
+
+
+def calc_kappa(a, beta, weight = None):
+    '''calculates kappa by minimising the sum of squares'''
+    if weight is None:
+        x_sum = sum(a)
+        x_sq_sum = (np.array(a)**2).sum()
+    else:
+        x_sum = np.multiply(a, weight).sum()
+        x_sq_sum = np.multiply(a**2, weight).sum()
+
+    kappa = beta * (x_sum / x_sq_sum)
+    return(kappa)
+
+
+####
+# Other inequality functions
+####
 
 def atkinson_adjusted_ede(a, beta = -0.5, weight = None):
     '''returns adjusted atkinson index'''
@@ -169,23 +187,3 @@ def gini_index(a, beta = -0.5, weight = None):
         area_diff = area_total - area_real
         gini = round((area_diff / area_total), 3)
     return(gini)
-
-def calc_kappa(a, beta, weight = None):
-    '''calculates kappa by minimising the sum of squares'''
-    if weight != None:
-        kappa_data = [] # init list
-        count = 0 # used for indexing weights
-        for i in a:
-            for weighting in range(int(weight[count])):
-                kappa_data.append(i)
-    else:
-        kappa_data = a
-
-    x_sum = 0 # init sum
-    x_sq_sum = 0 # init x squared sum
-    for x in kappa_data:
-        x_sum += x
-        x_sq_sum += x**2
-    kappa = beta * (x_sum / x_sq_sum)
-
-    return(kappa)
