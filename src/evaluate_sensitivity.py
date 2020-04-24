@@ -53,7 +53,7 @@ def main():
         # save result
         results.to_csv(results_fn)
     # plots
-    # plot_aversion_continuous(results)
+    plot_aversion_continuous(results)
     # plot_aversion_discrete(results)
     plot_mean_ede_bycity(results, data)
 
@@ -125,35 +125,36 @@ def plot_aversion_discrete(results):
     fig_out = '/homedirs/man112/access_inequality_index/fig/sensitivity_aversion_cities.pdf'
     plt.savefig(fig_out, dpi=800, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
 
-def plot_mean_ede(results, data):
-    # calculate the mean for each city
-    results_mean = []
-    for state in states:
-        # get the data subset
-        df = data['{}_data'.format(state)].copy()
-        # calculate the values
-        value = np.average(list(df.distance), weights = list(df['H7X001']))
-        # add to list
-        new_result = [cities[state], 'mean', value]
-        results_mean.append(new_result)
-    results_mean = pd.DataFrame(results_mean, columns = ['city','beta','mean'])
-    results_mean = results_mean.pivot(index='city', columns='beta', values='mean')
-    # add mean to EDE table
-    results = pd.merge(results,results_mean, on='city')
-    # format for plot
-    results_beta = results.copy()
-    results_beta['beta'] = results_beta['beta'].round(2).apply(str)
-    print(results_beta)
-    results_beta = results_beta.pivot(index='mean', columns='beta', values='ede')
-    # results_beta = results_beta.sort_values(by='-0.5')
-    ax = plt.axes()
-    # plt.locator_params(axis='y', nbins=5)
-    results_beta.plot(y=['-0.25','-0.5','-0.75','-1.0','-1.5','-2.0'],ax=ax,style='o-')
-    plt.ylim([0, None])
-    plt.xlabel('Average distance to nearest store')
-    plt.ylabel('EDE distance to nearest store')
-    fig_out = '/homedirs/man112/access_inequality_index/fig/mean_ede.pdf'
-    plt.savefig(fig_out, dpi=800, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
+# def plot_mean_ede(results, data):
+#     # calculate the mean for each city
+#     results_mean = []
+#     for state in states:
+#         # get the data subset
+#         df = data['{}_data'.format(state)].copy()
+#         # calculate the values
+#         value = np.average(list(df.distance), weights = list(df['H7X001']))
+#         # add to list
+#         new_result = [cities[state], 'mean', value]
+#         results_mean.append(new_result)
+#     results_mean = pd.DataFrame(results_mean, columns = ['city','beta','mean'])
+#     results_mean = results_mean.pivot(index='city', columns='beta', values='mean')
+#     # add mean to EDE table
+#     results = pd.merge(results,results_mean, on='city')
+#     # format for plot
+#     results_beta = results.copy()
+#     results_beta['beta'] = results_beta['beta'].round(2).apply(str)
+#     print(results_beta)
+#     results_beta = results_beta.pivot(index='mean', columns='beta', values='ede')
+#     # results_beta = results_beta.sort_values(by='-0.5')
+#     ax = plt.axes()
+#     # plt.locator_params(axis='y', nbins=5)
+#     results_beta.plot(y=['-0.25','-0.5','-0.75','-1.0','-1.5','-2.0'],ax=ax,style='o-')
+#     plt.ylim([0, None])
+#     plt.xlim([0, None])
+#     plt.xlabel('Average distance to nearest store')
+#     plt.ylabel('EDE distance to nearest store')
+#     fig_out = '/homedirs/man112/access_inequality_index/fig/mean_ede.pdf'
+#     plt.savefig(fig_out, dpi=800, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
 
 def plot_mean_ede_bycity(results, data):
     # calculate the mean for each city
@@ -175,17 +176,23 @@ def plot_mean_ede_bycity(results, data):
     results_beta['beta'] = results_beta['beta'].round(2).apply(str)
     results_beta = results_beta[results_beta.beta.isin(['-0.25','-0.5','-0.75','-1.0','-1.5','-2.0'])]
     ax = plt.axes()
-    results_beta.groupby('city').plot(x='mean',y='ede',ax=ax,style='o-')
+    results_beta.groupby('city').plot(y='mean',x='ede',ax=ax,style='o-',label='city',linewidth=1)
     # results_beta = results_beta.pivot(index='mean', columns='city', values='ede')
     # results_beta = results_beta.sort_values(by='-0.5')
-
+    # import code
+    # code.interact(local=locals())
     # plt.locator_params(axis='y', nbins=5)
     # results_beta.plot(y=['-0.25','-0.5','-0.75','-1.0','-1.5','-2.0'],ax=ax,style='o-')
-    plt.ylim([0, None])
-    plt.xlabel('Average distance to nearest store')
-    plt.ylabel('EDE distance to nearest store')
-    xy_line = (np.min(results_beta.ede),np.max(results_beta.ede))
-    ax.plot(xy_line,xy_line, 'k--')
+    L=plt.legend()
+    cities_alph = list(cities.values())
+    cities_alph.sort()
+    [L.get_texts()[i].set_text(cities_alph[i]) for i in range(len(cities_alph))]
+
+    plt.ylim([0, 3])
+    plt.ylabel('Average distance to nearest store')
+    plt.xlabel('EDE distance to nearest store')
+    xy_line = (0,np.max(results_beta.ede))
+    ax.plot(xy_line,xy_line, 'k--',linewidth=0.5)
     fig_out = '/homedirs/man112/access_inequality_index/fig/mean_ede.pdf'
     plt.savefig(fig_out, dpi=800, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
 

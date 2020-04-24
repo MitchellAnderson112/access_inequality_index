@@ -66,10 +66,10 @@ def main():
         incomes = [df.loc[i,'JOIE001'] for i in range(len(df)) if not np.isnan(df.loc[i,'JOIE001'])]
         results.loc[state, 'Income EDE'] = inequality_function.kolm_pollak_ede(incomes, kappa=kappa_income, weight=weight)
 
-    #plot_gini(data)
+    # plot_gini(data)
     #plot_hist(data)
-    plot_scatter(results)
-    # plot_cdf(data)
+    # plot_scatter(results)
+    plot_cdf(data)
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/{}_{}.csv'.format(file_name,weight_code))
 
 
@@ -139,11 +139,11 @@ def plot_cdf(data = None):
             plt.plot(df.distance, df.pop_perc, label=state+'_'+group) #plot the cdf
     # labels
     plt.ylabel('% Residents')
-    plt.xlabel('Distance to the nearest supermakrt (km)'.format())
+    plt.xlabel('Distance to the nearest supermarket (km)'.format())
     plt.legend(loc='best')
     # limits
     plt.xlim([0,10])
-    plt.ylim([0,None])
+    plt.ylim([0,105])
     # savefig
     fig_out = '/homedirs/man112/access_inequality_index/fig/CDF_{}.pdf'.format(group)
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
@@ -179,42 +179,7 @@ def plot_scatter(results):
     # savefig
     fig_out = '/homedirs/man112/access_inequality_index/fig/scatter_income.pdf'
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
-
-
-
-def plot_scatter_ede(results):
-    '''
-    scatter plot the equality metrics
-    '''
-    ## Mean vs Gini
-    x = 'Distribution Mean'; y = 'Gini Index'; lbl = 'City'
-    ax = results.plot.scatter(x=x, y=y, c='#1E386A')
-    results[[x,y,lbl]].apply(lambda row: ax.text(*row),axis=1);
-    # labels
-    plt.ylabel(y)
-    plt.xlabel('Average distance to the nearest store (km)')
-    # limits
-    plt.xlim([0,3.5])
-    plt.ylim([0,0.6])
-    # savefig
-    fig_out = '/homedirs/man112/access_inequality_index/fig/scatter_gini.pdf'
-    plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
-
-    ## EDE: distance vs income
-    x = 'Income EDE'; y = 'Kolm-Pollak EDE'; lbl = 'City'
-    ax = results.plot.scatter(x=x, y=y, c='#1E386A')
-    results[[x,y,lbl]].apply(lambda row: ax.text(*row),axis=1);
-    # labels
-    plt.ylabel('EDE of distance to the nearest store (km)')
-    plt.xlabel('EDE of median household income ($)')
-    # limits
-    plt.xlim([0,None])
-    plt.ylim([0,3.5])
-    # savefig
-    fig_out = '/homedirs/man112/access_inequality_index/fig/scatter_income.pdf'
-    plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
-
-
+    plt.clf()
 
 
 def plot_gini(data):

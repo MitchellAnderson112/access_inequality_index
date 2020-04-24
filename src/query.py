@@ -18,6 +18,7 @@ import shapely
 from geoalchemy2 import Geometry, WKTElement
 import requests
 from sqlalchemy.types import Float, Integer
+import pandas as pd
 if par == True:
     import multiprocessing as mp
     from joblib import Parallel, delayed
@@ -51,18 +52,28 @@ def create_dest_table(db):
     con = db['con']
     engine = db['engine']
     # destinations and locations
-    types = ['supermarket', 'hospital']
+    types = ['supermarket']#, 'hospital']
     # import the csv's
     gdf = gpd.GeoDataFrame()
     for dest_type in types:
-        files = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/{}/{}_{}.shp'.format(state, context['city_code'], dest_type, state, dest_type)
+        files = '/file/Research/CivilSystems/data/usa/{}/{}/{}/{}_{}.shp'.format(state, context['city_code'], dest_type, state, dest_type)
         df_type = gpd.read_file('{}'.format(files))
         # df_type = pd.read_csv('data/destinations/' + dest_type + '_FL.csv', encoding = "ISO-8859-1", usecols = ['id','name','lat','lon'])
-        if df_type.crs['init'] != 'epsg:4269':
+        if df_type.crs.to_epsg() != '4269':
             # project into lat lon
-            df_type = df_type.to_crs({'init':'epsg:4269'})
+            df_type.crs = 'epsg:4269'
         df_type['dest_type'] = dest_type
         gdf = gdf.append(df_type)
+
+    # for year in ['07','11','14','20']:
+    #     files = '/file/Research/CivilSystems/data/usa/{}/{}/supermarket_verified/Markets-{}.shp'.format(state, context['city_code'], year)
+    #     df_type = gpd.read_file('{}'.format(files))
+    #     # df_type = pd.read_csv('data/destinations/' + dest_type + '_FL.csv', encoding = "ISO-8859-1", usecols = ['id','name','lat','lon'])
+    #     if df_type.crs.to_epsg() != '4269':
+    #         # project into lat lon
+    #         df_type.crs = 'epsg:4269'
+    #     df_type['dest_type'] = 'Markets-{}'.format(year)
+    #     gdf = gdf.append(df_type)
 
     # set a unique id for each destination
     gdf['id'] = range(len(gdf))
@@ -74,7 +85,7 @@ def create_dest_table(db):
     gdf.set_index(['id','dest_type'], inplace=True)
 
     # export to sql
-    gdf.to_sql('destinations', engine, dtype={'geom': Geometry('POINT', srid= 4269)})
+    gdf.to_sql('destinations', engine, if_exists='append', dtype={'geom': Geometry('POINT', srid= 4269)})
 
     # update indices
     cursor = con.cursor()
@@ -99,7 +110,6 @@ def query_points(db, context):
     orig_df = gpd.GeoDataFrame.from_postgis(sql, db['con'], geom_col='geom')
     orig_df['x'] = orig_df.geom.centroid.x
     orig_df['y'] = orig_df.geom.centroid.y
-    print(orig_df.x)
     # drop duplicates
     orig_df.drop('geom',axis=1,inplace=True)
     orig_df.drop_duplicates(inplace=True)
@@ -125,7 +135,7 @@ def query_points(db, context):
         origxdest = execute_route_query(origxdest, orig_df, dest_df)
     # add df to sql
     logger.info('Writing data to SQL')
-    origxdest.to_sql('distance', con=db['engine'], if_exists='replace', index=False, dtype={"distance":Float(), 'id_dest':Integer()})
+    origxdest.to_sql('distance_test', con=db['engine'], if_exists='replace', index=False, dtype={"distance":Float(), 'id_dest':Integer()})
     # update indices
     queries = ['CREATE INDEX "dest_idx" ON distance ("id_dest");',
             'CREATE INDEX "orig_idx" ON distance ("id_orig");']
@@ -149,7 +159,7 @@ def single_query(query):
     return(dist)
 
 
-def requests_retry_session(retries=10, backoff_factor=0.1, status_forcelist=(500, 502, 504), session=None):
+def requests_retry_session(retries=0, backoff_factor=0.1, status_forcelist=(500, 502, 504), session=None):
     '''
     When par ==True, issues with connecting to the docker, can change the retries to keep trying to connect
     '''
@@ -167,6 +177,7 @@ def add_column_demograph(con):
     '''
     queries = ['ALTER TABLE demograph ADD COLUMN geoid10 CHAR(15)',
                 '']
+
 def execute_route_query(origxdest, orig_df, dest_df):
     # build query list:
     query_0 = np.full(fill_value = context['osrm_url'] + '/route/v1/driving/', shape=origxdest.shape[0], dtype = object)
@@ -197,48 +208,89 @@ def execute_route_query(origxdest, orig_df, dest_df):
 
 
 def execute_table_query(origxdest, orig_df, dest_df):
-    #Use the table service so as to send only one request and a reply with all of the data
+    #Use the table service so as to reduce the amount of requests sent
     #Probably stick with MLD as pre-proccesing wont do much when changing things as CD only gets faster with good pre-processing
     # https://github.com/Project-OSRM/osrm-backend/blob/master/docs/http.md#table-service
 
-
-    #here we want a for loop of string comp to build the query with the table instead of creating lots of induvidual queries
-    iterator = 0
-    destination_string = "&destinations="
-    source_string = "?sources="
+    #init dataframe for results
+    df = pd.DataFrame(columns=['orig_loc','orig_id','dest_loc','dest_id','dist','duration'])
+    #init list for destination co-ords
+    dest_locs = []
+    dest_ids = []
     base_string = context['osrm_url'] + "/table/v1/driving/"
-    #this needs to be made more robust
-    for i in range(len(dest_df)) :
-        base_string += str(orig_df.x[i]) + "," + str(orig_df.y[i]) + ";"
-        source_string += str(iterator) + ";"
-        iterator += 1
-        base_string += str(dest_df['lon'][i]) + "," + str(dest_df['lat'][i]) + ";"
-        #base_string += origxdest["id_dest"].values['x'][i].value + "," + origxdest["id_dest"].values['y'][i].value + ";"
-        destination_string += str(iterator) + ";"
-        iterator += 1
+
+    #this needs to be made more robust and efficient goddam
+
+    dest_string = ""
+    for j in range(len(dest_df)):
+        #now add each dest in the string
+        dest_string += str(dest_df['lon'][j]) + "," + str(dest_df['lat'][j]) + ";"
+        dest_locs.append(str(dest_df['lon'][j]) + "," + str(dest_df['lat'][j]))
+        dest_ids.append(j)
+    dest_string = dest_string[:-1]
+
+    #add dest_co-ords to df
+    df['dest_loc'] = len(orig_df)*dest_locs
+    df['dest_id'] = len(orig_df)*dest_ids
+
+    query_list = []
+
+    for i in range(len(orig_df)):
+        orig_loc = str(orig_df.x[i]) + "," + str(orig_df.y[i])
+        temp_orig_locs = len(dest_df)*[str(orig_loc)]
+        temp_orig_ids = len(dest_df)*[i]
+        df['orig_loc'].append(pd.Series(temp_orig_locs))
+        df['orig_id'].append(pd.Series(temp_orig_ids))
+        temp_query_wrapper = QueryWrapper(base_string, orig_df.x[i], orig_df.y[i])
+        #add orig in position 0 of the query string
+        temp_query_wrapper.query_string += str(orig_df.x[i]) + "," + str(orig_df.y[i]) + ";"
+        temp_query_wrapper.query_string += dest_string
+        #now define the orig and dest bits and extra stuff
+        #remove the semicolon
+        temp_query_wrapper.query_string += "?annotations=duration,distance&sources=0"
+        #&annotation=distance
+        query_list.append(temp_query_wrapper)
 
 
-    #removes the semicolon at the end
-    destination_string = destination_string[:-1]
-    source_string = source_string[:-1]
-    base_string = base_string[:-1]
+    #temp_data = {"orig_x":[], 'orig_y':[], 'dest_x': [], 'dest_y':[], 'distance':[]}
+    #temp_origxdest = pd.DataFrame(temp_data, columns=['orig_x', 'orig_y', 'dest_x', 'dest_y', 'distance'])
+    temp_origxdest_dist = []
+    temp_origxdest_dur = []
 
-    query_string = base_string + source_string + destination_string + "&annotation=distance"
-    print(query_string)
-    #hopefully not too big of a data request
-    r = requests.get(query_string)
-    #need to process r here to get the required info
-    
-    #getting 400 bad request response so will need to look further into the formatting
-    print(r.json())
-    #too many values to unpack error
-    #for index, pair in origxdest:
-    #   origxdest.loc[index, 'distance'] = r.json()["distance"][index]
+    #interact with code to visualise
+    #what happens if we make 1 iteration of querylist worth 2 or 3... dests?
+    #code.interact(local=locals())
 
+    for query_wrapper in tqdm(query_list):
+        response = requests.get(query_wrapper.query_string)
+
+        #now to proccess the response
+        #for dest_string in response.json()['destinations'] :
+            #this is temp
+        temp_origxdest_dist.append(response.json()['distances'][0][1:])
+        temp_origxdest_dur.append(response.json()['durations'][0][1:])
+            #temp_origxdest.append([query_wrapper.orig_loc_x, query_wrapper.orig_loc_y, dest_string['location'][0], dest_string['location'][1], dest_string['distance']])
+    code.interact(local=locals())
+    df['dist'] = temp_origxdest_dist
+    df['duration'] = temp_origxdest_dur
+    code.interact(local=locals())
+
+            #locate the pair
+            #print(dest_string['distance'])
+            #origxdest.loc((origxdest['id_orig'] == query_wrapper.orig_loc_x) & (origxdest['id_orig']['y'] == query_wrapper.orig_loc_y) & (origxdest['id_dest']['lon'] == dest_string['location'][0])& (origxdest['id_dest']['lat'] == dest_string['location'][1]))['distance'] = dest_string['distance']
+            #enter the value
+        #now we have a list of all distances we were given
+
+        #origxdest.loc("thing to locate", 'distance') = response.json()
+    #print(temp_origxdest)
     return origxdest
 
+class QueryWrapper:
 
-
+    def __init__(self, query_string, orig_loc_x, orig_loc_y):
+        self.query_string = query_string
+        self.orig_loc_x = orig_loc_x
+        self.orig_loc_y = orig_loc_y
 
 if __name__ == "__main__":
     logger.info('query.py code invoked')
