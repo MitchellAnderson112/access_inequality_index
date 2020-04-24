@@ -129,7 +129,7 @@ def plot_race(results):
     # plot on a line graph
     ax = plt.axes()
     plt.locator_params(axis='y', nbins=4)
-    results.plot(y=["H7X001", "H7X002", "H7X003","H7Y003"],ax=ax)
+    results.plot(y=["H7X001", "H7X002", "H7X003"],ax=ax) #,"H7Y003"
     plt.ylim([0, None])
     plt.xticks(range(10),results.index.values)
     plt.xticks(rotation=90)

@@ -64,7 +64,7 @@ def cfg_init(state):
         context['city_code'] = 'chi'
         context['city'] = 'Chicago'
         context['osrm_url'] = 'http://localhost:6005'
-        context['services'] = ['supermarket']
+        context['services'] = ['supermarket','Market_07','Market_11','Market_14','Market_20']
     elif state == 'tx':
         db['name'] = 'access_tx'
         context['city_code'] = 'hou'

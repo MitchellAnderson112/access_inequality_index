@@ -68,8 +68,9 @@ def main():
 
     # plot_gini(data)
     #plot_hist(data)
-    # plot_scatter(results)
+    plot_scatter(results)
     plot_cdf(data)
+    calc_percentiles(data)
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/{}_{}.csv'.format(file_name,weight_code))
 
 
@@ -255,7 +256,7 @@ def calc_percentiles(data=None):
     percentiles = percentiles.drop_duplicates(["state", "pop_perc"])
     percentiles = percentiles.pivot(index='state', columns='pop_perc', values='distance')
     # save
-    percentiles.to_csv('/homedirs/man112/access_inequality_index/data/results/food_des/distance_percentiles.csv')
+    percentiles.to_csv('/homedirs/man112/access_inequality_index/data/results/city_distance_percentiles.csv')
 
 
 def plot_edes(data = None):

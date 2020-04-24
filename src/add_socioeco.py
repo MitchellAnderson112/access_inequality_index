@@ -1,13 +1,12 @@
 # user defined variables
-state = input('State: ')
 from config import *
-db, context = cfg_init(state)
 
-
-def import_csv(db):
+def import_csv(state):
     '''
     import a csv into the postgres db
     '''
+    db, context = cfg_init(state)
+
     county_codes = {'md':'510', 'wa':'033','nc':'129','il':'031','tx':'201',
                     'or':'051','ga':'121','la':'071','mi':'163','co':'031','fl':'086'}
     county = county_codes[state]
@@ -40,11 +39,12 @@ def import_csv(db):
     distxdem = pd.merge(dist[['geoid10','distance']], demo[dem_cols], on='geoid10', how='inner')
 
     # upload to sql
-    distxdem.to_sql('distxdem', db['engine'])
+    distxdem.to_sql('distxdem', db['engine'], if_exists='replace')
     cursor = db['con'].cursor()
     # commit
     db['con'].commit()
 
 
 if __name__ == '__main__':
-    import_csv(db)
+    state = input('State: ')
+    import_csv(state)
