@@ -20,6 +20,7 @@ import utils
 from config import *
 import inequality_function
 import matplotlib
+from scipy import stats
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 import matplotlib.style as style
@@ -62,8 +63,9 @@ def main():
         # adds all summary stats from the distribution
         results.loc[state, 'Distribution Mean'], results.loc[state, 'Distribution Max'], results.loc[state, 'Distribution Standard Deviation'], results.loc[state, 'Distribution Coefficient of Variation'] = get_stats(df)
         # adds KP for income
-        weight = [weight[i] for i in range(len(df)) if not np.isnan(df.loc[i,'JOIE001'])]
-        incomes = [df.loc[i,'JOIE001'] for i in range(len(df)) if not np.isnan(df.loc[i,'JOIE001'])]
+        df_income = df[~np.isnan(df['JOIE001'])][['JOIE001',weight_code]]
+        weight = df_income[weight_code].tolist()
+        incomes = df_income['JOIE001'].tolist()
         results.loc[state, 'Income EDE'] = inequality_function.kolm_pollak_ede(incomes, kappa=kappa_income, weight=weight)
 
     # plot_gini(data)
@@ -86,9 +88,24 @@ def get_data():
         db['con'].close()
         city.append(context['city'])
         df = data['{}_data'.format(state)]
-        df = df.loc[df['distance'] !=0] # removes all rows with 0 distance
+        # df = df.loc[df['distance'] !=0] # removes all rows with 0 distance
         df = df.loc[df['H7X001'] !=0] # removes all rows with 0 population
         df.distance = df.distance/1000 # converts from meters to Kms
+        # plot block distances
+            # df.plot.scatter(x='distance',y='distance', alpha=0.2)
+            # fig_out = '/homedirs/man112/access_inequality_index/fig/{}_distance.png'.format(state)
+            # plt.savefig(fig_out, dpi=500, format='png', transparent=True, bbox_inches='tight',facecolor='w')
+        # drop outliers (errors in the distance calculations) -> this would be better if it was identifying the neighbors and averaging
+            # Q1 = df.distance.quantile(0.25)
+            # Q3 = df.distance.quantile(0.75)
+            # IQR = Q3 - Q1
+            # is_outlier = (df.distance > (Q3 + 4 * IQR))
+            # print('IQR: Drop {} outliers ({:.2f}%) from {}'.format(np.sum(is_outlier),np.sum(is_outlier)/len(is_outlier)*100, state))
+            # is_outlier = (df.distance > df.distance.quantile(0.999))
+            # print('99.9%: Drop {} outliers ({:.2f}%) from {}'.format(np.sum(is_outlier),np.sum(is_outlier)/len(is_outlier)*100, state))
+            # is_outlier = (np.abs(stats.zscore(df.distance)) > 3)
+            # # df = df[~is_outlier]
+            # print('Z: Drop {} outliers ({:.2f}%) from {}'.format(np.sum(is_outlier),np.sum(is_outlier)/len(is_outlier)*100, state))
         data['{}_data'.format(state)] = df # replaces the dataframe in the dictionary
     return(city, data)
 
