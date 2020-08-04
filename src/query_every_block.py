@@ -41,51 +41,7 @@ def main(state):
     logger.info('Database connection closed')
 
     # email completion notification
-    #utils.send_email(body='Querying {} complete'.format(context['city']))
-
-
-def create_dest_table(db):
-    '''
-    create a table with the destinations
-    '''
-    # db connections
-    con = db['con']
-    engine = db['engine']
-    # destinations and locations
-    types = ['supermarket', 'hospital']
-    # import the csv's
-    gdf = gpd.GeoDataFrame()
-    for dest_type in types:
-        files = '/homedirs/man112/access_inequality_index/data/usa/{}/{}/{}/{}_{}.shp'.format(state, context['city_code'], dest_type, state, dest_type)
-        df_type = gpd.read_file('{}'.format(files))
-        # df_type = pd.read_csv('data/destinations/' + dest_type + '_FL.csv', encoding = "ISO-8859-1", usecols = ['id','name','lat','lon'])
-        if df_type.crs['init'] != 'epsg:4269':
-            # project into lat lon
-            df_type = df_type.to_crs({'init':'epsg:4269'})
-        df_type['dest_type'] = dest_type
-        gdf = gdf.append(df_type)
-
-    # set a unique id for each destination
-    gdf['id'] = range(len(gdf))
-    # prepare for sql
-    gdf['geom'] = gdf['geometry'].apply(lambda x: WKTElement(x.wkt, srid=4269))
-    #drop all columns except id, dest_type, and geom
-    gdf = gdf[['id','dest_type','geom']]
-    # set index
-    gdf.set_index(['id','dest_type'], inplace=True)
-
-    # export to sql
-    gdf.to_sql('destinations', engine, dtype={'geom': Geometry('POINT', srid= 4269)})
-
-    # update indices
-    cursor = con.cursor()
-    queries = ['CREATE INDEX "dest_id" ON destinations ("id");',
-            'CREATE INDEX "dest_type" ON destinations ("dest_type");']
-    for q in queries:
-        cursor.execute(q)
-
-    # commit to db
-    con.commit()
+    utils.send_email(body='Querying {} complete'.format(context['city']))
 
 
 def query_points(db, context):
@@ -103,34 +59,39 @@ def query_points(db, context):
     # drop duplicates
     orig_df.drop('geom',axis=1,inplace=True)
     orig_df.drop_duplicates(inplace=True)
+    # keep only some columns
+    orig_df = orig_df[['geoid10','x','y']]
     # set index
     orig_df = orig_df.set_index('geoid10')
 
-    # get list of destination ids
-    sql = "SELECT * FROM destinations"
-    dest_df = gpd.GeoDataFrame.from_postgis(sql, db['con'], geom_col='geom')
-    dest_df = dest_df.set_index('id')
-    dest_df['lon'] = dest_df.geom.centroid.x
-    dest_df['lat'] = dest_df.geom.centroid.y
+    orig_n = len(orig_df)
+    orig_per_batch = 1000
+    orig_sets = [(i, min(i+orig_per_batch, orig_n)) for i in range(0,orig_n,orig_per_batch)]
+    for i in tqdm(orig_sets):
+        orig_set = orig_df.iloc[list(range(i[0],i[1]))]
 
-    # list of origxdest pairs
-    origxdest = pd.DataFrame(list(itertools.product(orig_df.index, dest_df.index)), columns = ['id_orig','id_dest'])
-    origxdest['distance'] = None
-    origxdest['duration'] = None
+        # list of origxdest pairs
+        origxdest = pd.DataFrame(list(itertools.product(orig_set.index, orig_df.index)), columns = ['id_orig','id_dest'])
+        origxdest['distance'] = None
+        origxdest['duration'] = None
 
-    # df of durations, distances, ids, and co-ordinates
-    origxdest = execute_table_query(origxdest, orig_df, dest_df, context)
+        logger.info('prepared to query {} O-D pairs'.format(len(origxdest)))
 
-    # add df to sql
-    logger.info('Writing data to SQL')
-    write_to_postgres(origxdest, db, 'distance_duration')
-    # origxdest.to_sql('distance_duration', con=db['engine'], if_exists='replace', index=False, dtype={"distance":Float(), "duration":Float(), 'id_dest':Integer()}, method='multi')
-    logger.info('Distances written successfully to SQL')
+        # df of durations, distances, ids, and co-ordinates
+        origxdest = execute_table_query(origxdest, orig_set, orig_df, context)
+
+        # add df to sql
+        logger.info('Writing data to SQL')
+        write_to_postgres(origxdest, db, 'block2block')
+        # origxdest.to_sql('block2block', con=db['engine'], if_exists='replace', index=False, dtype={"distance":Float(), "duration":Float(), 'id_dest':Integer()}, method='multi')
+        logger.info('Distances written successfully to SQL')
+
+
     logger.info('Updating indices on SQL')
     # update indices
     queries = [
-                'CREATE INDEX "dest_idx" ON distance_duration ("id_dest");',
-                'CREATE INDEX "orig_idx" ON distance_duration ("id_orig");'
+                'CREATE INDEX "dest_idx" ON block2block ("id_dest");',
+                'CREATE INDEX "orig_idx" ON block2block ("id_orig");'
                 ]
     for q in queries:
         cursor.execute(q)
@@ -143,7 +104,7 @@ def write_to_postgres(df, db, table_name):
     ''' quickly write to a postgres database
         from https://stackoverflow.com/a/47984180/5890574'''
 
-    df.head(0).to_sql(table_name, db['engine'], if_exists='replace',index=False) #truncates the table
+    df.head(0).to_sql(table_name, db['engine'], if_exists='append',index=False) #truncates the table
 
     conn = db['engine'].raw_connection()
     cur = conn.cursor()
@@ -158,7 +119,7 @@ def execute_table_query(origxdest, orig_df, dest_df, context):
     # Use the table service so as to reduce the amount of requests sent
     # https://github.com/Project-OSRM/osrm-backend/blob/master/docs/http.md#table-service
 
-    batch_limit = 10000
+    batch_limit = 50000
 
     dest_n = len(dest_df)
     orig_n = len(orig_df)
@@ -172,7 +133,7 @@ def execute_table_query(origxdest, orig_df, dest_df, context):
     dest_string = ""
     for j in range(dest_n):
         #now add each dest in the string
-        dest_string += str(dest_df['lon'][j]) + "," + str(dest_df['lat'][j]) + ";"
+        dest_string += str(dest_df['x'][j]) + "," + str(dest_df['y'][j]) + ";"
     #remove last semi colon
     dest_string = dest_string[:-1]
 

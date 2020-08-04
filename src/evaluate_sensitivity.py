@@ -44,7 +44,7 @@ def main():
                 # get the data subset
                 df = data['{}_data'.format(state)].copy()
                 # calculate the values
-                ede = inequality_function.kolm_pollak_ede(list(df.distance), kappa = kappa, weight = list(df['H7X001']))
+                ede = inequality_function.kolm_pollak_ede(list(df.distance), kappa = kappa, weights = list(df['H7X001']))
                 # add to list
                 new_result = [cities[state], beta, ede]
                 results.append(new_result)
@@ -73,6 +73,12 @@ def get_data():
         df = df.loc[df['distance'] !=0] # removes all rows with 0 distance
         df = df.loc[df['H7X001'] !=0] # removes all rows with 0 population
         df.distance = df.distance/1000 # converts from meters to Kms
+        # drop outliers (errors in the distance calculations) -> this would be better if it was identifying the neighbors and averaging
+        Q1 = df.distance.quantile(0.25)
+        Q3 = df.distance.quantile(0.75)
+        IQR = Q3 - Q1
+        is_outlier = (df.distance > (Q3 + 4 * IQR))
+        df = df[~is_outlier]
         data['{}_data'.format(state)] = df # replaces the dataframe in the dictionary
     return(city, data)
 
@@ -103,8 +109,10 @@ def plot_aversion_continuous(results):
     ax = plt.axes()
     plt.locator_params(axis='y', nbins=4)
     results_ede.plot(ax=ax)
-    plt.ylim([0, 20])
+    plt.ylim([0, None])
     plt.gca().invert_xaxis()
+    # plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
+    #       fancybox=False, shadow=False, ncol=5)
     fig_out = '/homedirs/man112/access_inequality_index/fig/sensitivity_aversion.pdf'
     plt.savefig(fig_out, dpi=800, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
     plt.clf()

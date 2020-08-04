@@ -71,7 +71,6 @@ def cfg_init(state):
         context['city'] = 'Houston'
         context['osrm_url'] = 'http://localhost:6006'
         context['services'] = ['supermarket']
-        context['services'] = ['supermarket']
     elif state == 'or':
         db['name'] = 'access_or'
         context['city_code'] = 'por'

@@ -49,7 +49,7 @@ def main():
             # drop data that has 0 weight
             df = df.iloc[np.array(df[group]) > 0].copy()
             # calculate the ede
-            ede = inequality_function.kolm_pollak_ede(list(df.distance), kappa = kappa, weight = list(df[group]))
+            ede = inequality_function.kolm_pollak_ede(list(df.distance), kappa = kappa, weights = list(df[group]))
             # new result
             result_i = [cities[state], group, ede]
             results.append(result_i)
@@ -59,8 +59,10 @@ def main():
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/ede_subgroups_{}.csv'.format(beta))
     # plots
     plot_race(results)
-    plot_poverty(results)
+    # plot_poverty(results)
     plot_vehicle(results)
+    city_dems(data)
+
 
 def get_data():
     '''fills a dictionary of dataframes for each state'''
@@ -77,6 +79,12 @@ def get_data():
         df = df.loc[df['distance'] !=0] # removes all rows with 0 distance
         df = df.loc[df['H7X001'] !=0] # removes all rows with 0 population
         df.distance = df.distance/1000 # converts from meters to Kms
+        # drop outliers (errors in the distance calculations) -> this would be better if it was identifying the neighbors and averaging
+        Q1 = df.distance.quantile(0.25)
+        Q3 = df.distance.quantile(0.75)
+        IQR = Q3 - Q1
+        is_outlier = (df.distance > (Q3 + 4 * IQR))
+        df = df[~is_outlier]
         data['{}_data'.format(state)] = df # replaces the dataframe in the dictionary
     return(city, data)
 
@@ -128,9 +136,9 @@ def plot_race(results):
     results = results.sort_values(by='H7X001')
     # plot on a line graph
     ax = plt.axes()
-    plt.locator_params(axis='y', nbins=4)
+    plt.locator_params(axis='y', nbins=5)
     results.plot(y=["H7X001", "H7X002", "H7X003"],ax=ax) #,"H7Y003"
-    plt.ylim([0, None])
+    plt.ylim([0, 5])
     plt.xticks(range(10),results.index.values)
     plt.xticks(rotation=90)
     plt.xlabel('')
@@ -148,9 +156,9 @@ def plot_vehicle(results):
     results = results.sort_values(by='H7X001')
     # plot on a line graph
     ax = plt.axes()
-    plt.locator_params(axis='y', nbins=4)
+    plt.locator_params(axis='y', nbins=5)
     results.plot(y=["H7X001", "vehicle_access", "no_vehicle_access"],ax=ax)
-    plt.ylim([0, None])
+    plt.ylim([0, 5])
     plt.xticks(range(10),results.index.values)
     plt.xticks(rotation=90)
     plt.xlabel('')
@@ -194,7 +202,30 @@ def plot_ie(results):
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
 
 
-
+def city_dems(data):
+    ''' get a table with information about the cities '''
+    # initiate list
+    results = list()
+    # loop the states/cities
+    for state in states:
+        df = data['{}_data'.format(state)].copy()
+        pop_total = df['H7X001'].sum()
+        perc_white = df['H7X002'].sum()/pop_total*100
+        perc_black = df['H7X003'].sum()/pop_total*100
+        perc_nindian = df['H7X004'].sum()/pop_total*100
+        perc_asian = df['H7X005'].sum()/pop_total*100
+        perc_latin = df['H7Y003'].sum()/pop_total*100
+        per_poverty = df['poverty'].sum()/pop_total*100
+        per_no_car = df['no_vehicle_access'].sum()/pop_total*100
+        new_result = [cities[state], pop_total, perc_white, perc_black, perc_nindian, perc_asian, perc_latin, per_poverty, per_no_car]
+        # add to results
+        results.append(new_result)
+    # make list to DataFrame
+    results = pd.DataFrame(results, columns=['City','Population','% White','% Black','% Am. Indian','% Asian','% Latino', '% Poverty','% No Vehicle'])
+    results = results.round(1)
+    results = results.set_index('City')
+    results.to_csv('/homedirs/man112/access_inequality_index/data/results/city_dems.csv')
+    print(results)
 
 
 if __name__ == '__main__':
