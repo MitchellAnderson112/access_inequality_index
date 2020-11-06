@@ -56,7 +56,7 @@ def main():
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/chicago_supermarkets_{}.csv'.format(beta))
 
     # plots
-    plot_cdf(data)
+    # plot_cdf(data)
     # map_files(db, data)
     plot_edes_dem()
 

@@ -152,7 +152,7 @@ def atkinson_index(a, epsilon = -0.5, weight = None):
     index = 1 - (ede / x_mean)
     return(index)
 
-def gini_index(a, beta = -0.5, weight = None):
+def gini_index(a, weight = None):
     area_total = simps(np.arange(0,101,1), dx=1) #Calculates the area under the x=y curve
     if not weight:
         N = len(a)
@@ -163,6 +163,7 @@ def gini_index(a, beta = -0.5, weight = None):
     weight_perc = []
     w_perc_sum = 0
     perc_sum = 0
+    data_tot = sum(a)
     if not weight:
         for i in a:
             perc_sum += i/data_tot*100
@@ -174,7 +175,6 @@ def gini_index(a, beta = -0.5, weight = None):
         gini = round((area_diff / area_total), 3)
     else:
         weight_tot = sum(weight)
-        data_tot = sum(a)
         for i in a:
             perc_sum += i/data_tot*100
             a_percent.append(perc_sum)
@@ -187,3 +187,27 @@ def gini_index(a, beta = -0.5, weight = None):
         area_diff = area_total - area_real
         gini = round((area_diff / area_total), 3)
     return(gini)
+
+def gini(array, weights=None):
+    """Calculate the Gini coefficient of a numpy array."""
+    # based on bottom eq:
+    # http://www.statsdirect.com/help/generatedimages/equations/equation154.svg
+    # from:
+    # http://www.statsdirect.com/help/default.htm#nonparametric_methods/gini.htm
+    # All values are treated equally, arrays must be 1d:
+    if weights:
+        array = np.repeat(array,weights)
+    array = array.flatten()
+    if np.amin(array) < 0:
+        # Values cannot be negative:
+        array -= np.amin(array)
+    # Values cannot be 0:
+    array += 0.0000001
+    # Values must be sorted:
+    array = np.sort(array)
+    # Index per array element:
+    index = np.arange(1,array.shape[0]+1)
+    # Number of array elements:
+    n = array.shape[0]
+    # Gini coefficient:
+    return ((np.sum((2 * index - n  - 1) * array)) / (n * np.sum(array)))

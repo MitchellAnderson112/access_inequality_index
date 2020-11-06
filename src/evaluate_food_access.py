@@ -60,7 +60,7 @@ def main():
         # adds all adjusted atkinson metrics
         results.loc[state, 'Atkinson Adjusted Index'], results.loc[state, 'Atkinson Adjusted EDE'] = inequality_function.atkinson_adjusted_index(a, beta, weights), inequality_function.atkinson_adjusted_ede(a, beta, weights)
         # adds gini
-        results.loc[state, 'Gini Index'] = inequality_function.gini_index(a, beta, weights)
+        results.loc[state, 'Gini Index'] = inequality_function.gini(a, weights)
         # adds all summary stats from the distribution
         results.loc[state, 'Distribution Mean'], results.loc[state, 'Distribution Max'], results.loc[state, 'Distribution Standard Deviation'], results.loc[state, 'Distribution Coefficient of Variation'] = get_stats(df)
         # adds KP for income
@@ -71,10 +71,10 @@ def main():
 
     # plot_gini(data)
     # plot_single_hist(data)
-    plot_scatter(results)
+    # plot_scatter(results)
     # plot_cdf(data)
-    plot_cdf_hist(data)
-    calc_percentiles(data)
+    # plot_cdf_hist(data)
+    # calc_percentiles(data)
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/{}_{}.csv'.format(file_name,weight_code))
 
 
@@ -168,6 +168,39 @@ def plot_cdf(data = None):
     fig_out = '/homedirs/man112/access_inequality_index/fig/CDF_{}.pdf'.format(group)
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
     plt.clf()
+
+
+def plot_arbitary_gini():
+    '''plots two distributions and calculates their gini'''
+    import inequality_function as ineq
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    dist_1 = np.random.normal(2,.6,1000)
+    dist_2 = np.random.normal(5,.2,1000)
+
+    # calculate the gini
+    gini_1 = ineq.gini(dist_1)
+    gini_2 = ineq.gini(dist_2)
+
+    # plot the kde (displot)
+    plt.hist(dist_1, density=True, alpha=0.3)
+    sns.ecdfplot(dist_1)
+    plt.hist(dist_2, density=True, alpha=0.3)
+    sns.ecdfplot(dist_2)
+
+    # labels
+    plt.ylabel('percentage of residents')
+    plt.xlabel('some quantity'.format())
+    plt.legend(loc='best')
+    # savefig
+    fig_out = 'gini_example.pdf'
+    plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
+    print(gini_1)
+    print(gini_2)
+
+
 
 def plot_cdf_hist(data = None):
     '''plots a cdf from a dataframe'''

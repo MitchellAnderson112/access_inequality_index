@@ -36,7 +36,7 @@ def main():
         # initiate list
         results = list()
         # loop through beta values
-        for beta in tqdm(np.concatenate(([0,-0.25,-0.5,-0.75, -1.5, -2],np.logspace(0,1)*-1),axis=None)):
+        for beta in tqdm(np.concatenate(([-0.0001, -0.25,-0.5,-0.75, -1.5, -2],np.logspace(0,1)*-1),axis=None)):
             # calculate kappa from beta -- kappa is based on the distances from ALL states and the beta provided
             kappa = determine_kappa(data, beta, quantity='distance')
             # calculate the ede for each city
@@ -182,7 +182,9 @@ def plot_mean_ede_bycity(results, data):
     # format for plot
     results_beta = results.copy()
     results_beta['beta'] = results_beta['beta'].round(2).apply(str)
-    results_beta = results_beta[results_beta.beta.isin(['-0.25','-0.5','-0.75','-1.0','-1.5','-2.0'])]
+    results_beta = results_beta[results_beta.beta.isin(['-0.0', '-0.25','-0.5','-0.75','-1.0','-1.5','-2.0'])]
+    # import code
+    # code.interact(local=locals())
     ax = plt.axes()
     results_beta.groupby('city').plot(y='mean',x='ede',ax=ax,style='o-',label='city',linewidth=1)
     # results_beta = results_beta.pivot(index='mean', columns='city', values='ede')
