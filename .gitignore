@@ -17,3 +17,7 @@ inequality_function_test.py
 *.pdf
 *_scratch
 /fig
+raw/
+submission/
+*.gsheet
+*.xlsx
