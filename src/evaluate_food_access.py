@@ -16,9 +16,9 @@ file_name = 'food_des_{}'.format(beta)
 weight_code = 'H7X001'
 
 # Imports
+import inequalipy as ineq
 import utils
 from config import *
-import inequality_function
 import matplotlib
 import math
 from scipy import stats
@@ -54,27 +54,27 @@ def main():
         # adds aversion params
         results.loc[state, 'Kappa'], results.loc[state, 'Beta'] = kappa, beta
         # adds all Kolm-Pollak metrics
-        results.loc[state, 'Kolm-Pollak Index'], results.loc[state, 'Kolm-Pollak EDE'] = inequality_function.kolm_pollak_index(a, beta, kappa, weights), inequality_function.kolm_pollak_ede(a, beta, kappa, weights)
+        results.loc[state, 'Kolm-Pollak Index'], results.loc[state, 'Kolm-Pollak EDE'] = ineq.kolmpollak.index(a, beta, kappa, weights), ineq.kolmpollak.ede(a, beta, kappa, weights)
         # adds all normal (with inverted x) atkinson metrics
-        results.loc[state, 'Atkinson Index'], results.loc[state, 'Atkinson EDE'] = inequality_function.atkinson_index(at, np.absolute(beta), weights), inequality_function.atkinson_ede(at, np.absolute(beta), weights)
+        results.loc[state, 'Atkinson Index'], results.loc[state, 'Atkinson EDE'] = ineq.atkinson.index(at, np.absolute(beta), weights), ineq.atkinson.ede(at, np.absolute(beta), weights)
         # adds all adjusted atkinson metrics
-        results.loc[state, 'Atkinson Adjusted Index'], results.loc[state, 'Atkinson Adjusted EDE'] = inequality_function.atkinson_adjusted_index(a, beta, weights), inequality_function.atkinson_adjusted_ede(a, beta, weights)
+        results.loc[state, 'Atkinson Adjusted Index'], results.loc[state, 'Atkinson Adjusted EDE'] = -ineq.atkinson.index(a, beta, weights), ineq.atkinson.ede(a, beta, weights)
         # adds gini
-        results.loc[state, 'Gini Index'] = inequality_function.gini(a, weights)
+        results.loc[state, 'Gini Index'] = ineq.gini(a, weights)
         # adds all summary stats from the distribution
         results.loc[state, 'Distribution Mean'], results.loc[state, 'Distribution Max'], results.loc[state, 'Distribution Standard Deviation'], results.loc[state, 'Distribution Coefficient of Variation'] = get_stats(df)
         # adds KP for income
         df_income = df[~np.isnan(df['JOIE001'])][['JOIE001',weight_code]]
         weights = df_income[weight_code].tolist()
         incomes = df_income['JOIE001'].tolist()
-        results.loc[state, 'Income EDE'] = inequality_function.kolm_pollak_ede(incomes, kappa=kappa_income, weights=weights)
+        results.loc[state, 'Income EDE'] = ineq.kolmpollak.ede(incomes, kappa=kappa_income, weights=weights)
 
     # plot_gini(data)
-    # plot_single_hist(data)
-    # plot_scatter(results)
+    plot_single_hist(data)
+    plot_scatter(results)
     # plot_cdf(data)
-    # plot_cdf_hist(data)
-    # calc_percentiles(data)
+    plot_cdf_hist(data)
+    calc_percentiles(data)
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/{}_{}.csv'.format(file_name,weight_code))
 
 
@@ -124,7 +124,7 @@ def determine_kappa(data, beta, quantity):
                     kappa_data.append(i)
                 count += 1
     # calculate the kappa
-    kappa = inequality_function.calc_kappa(kappa_data, beta)
+    kappa = ineq.kolmpollak.calc_kappa(kappa_data, beta)
     return(kappa)
 
 def get_stats(df):
@@ -172,13 +172,13 @@ def plot_cdf(data = None):
 
 def plot_arbitary_gini():
     '''plots two distributions and calculates their gini'''
-    import inequality_function as ineq
     import numpy as np
     import matplotlib.pyplot as plt
     import seaborn as sns
+    import inequipy as ineq
 
-    dist_1 = np.random.normal(2,.6,1000)
-    dist_2 = np.random.normal(5,.2,1000)
+    dist_1 = np.random.normal(2,.6,10000)
+    dist_2 = np.random.normal(5,.2,10000)
 
     # calculate the gini
     gini_1 = ineq.gini(dist_1)
@@ -195,7 +195,7 @@ def plot_arbitary_gini():
     plt.xlabel('some quantity'.format())
     plt.legend(loc='best')
     # savefig
-    fig_out = 'gini_example.pdf'
+    fig_out = '/homedirs/man112/access_inequality_index/fig/gini_example.pdf'
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
     print(gini_1)
     print(gini_2)
@@ -277,8 +277,8 @@ def plot_scatter(results):
     plt.ylabel(y)
     plt.xlabel('Average distance to the nearest store (km)')
     # limits
-    plt.xlim([0,3.5])
-    plt.ylim([0,0.6])
+    plt.xlim([0,3])
+    plt.ylim([0,0.5])
     # savefig
     fig_out = '/homedirs/man112/access_inequality_index/fig/scatter_gini.pdf'
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
@@ -414,7 +414,7 @@ def plot_edes_dem():
     # get the data
     city, data = get_data() # data is a dictionary of dataframes for each state
     kappa_data = get_kappa_data(data)
-    kappa = inequality_function.calc_kappa(kappa_data, beta) # kappa is based on the distances from ALL states and the beta provided
+    kappa = ineq.calc_kappa(kappa_data, beta) # kappa is based on the distances from ALL states and the beta provided
     results = pd.DataFrame(np.nan, index=np.arange(10), columns=['State','City', 'KP_EDE_H7X001', 'KP_IE_H7X001', 'KP_EDE_H7X002', 'KP_IE_H7X002', 'KP_EDE_H7X003', 'KP_IE_H7X003','KP_EDE_H7X004', 'KP_IE_H7X004','KP_EDE_H7X005', 'KP_IE_H7X005','KP_EDE_H7Y003', 'KP_IE_H7Y003'])
     # adds the city name
     results.State = states
@@ -431,7 +431,7 @@ def plot_edes_dem():
             at = list(1/dr.distance)
             weight = list(dr[race])
             # adds all Kolm-Pollak metrics
-            results.loc[state, 'KP_EDE_{}'.format(race)], results.loc[state, 'KP_IE_{}'.format(race)] = inequality_function.kolm_pollak_ede(a, kappa = kappa, weights = weights), inequality_function.kolm_pollak_index(a, kappa = kappa, weights = weights)
+            results.loc[state, 'KP_EDE_{}'.format(race)], results.loc[state, 'KP_IE_{}'.format(race)] = ineq.kolmpollak.ede(a, kappa = kappa, weights = weights), ineq.kolmpollak.index(a, kappa = kappa, weights = weights)
 
     print(results)
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/food_des/ede_dems_{}.csv'.format(beta))

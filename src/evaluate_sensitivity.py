@@ -14,9 +14,9 @@ cities = {'md':'baltimore','fl':'miami','co':'denver','mi':'detroit','la':'new o
 weight_code = 'H7X001'
 
 # Imports
+import inequalipy as ineq
 import utils
 from config import *
-import inequality_function
 import matplotlib
 from tqdm import tqdm
 matplotlib.rcParams['pdf.fonttype'] = 42
@@ -44,7 +44,7 @@ def main():
                 # get the data subset
                 df = data['{}_data'.format(state)].copy()
                 # calculate the values
-                ede = inequality_function.kolm_pollak_ede(list(df.distance), kappa = kappa, weights = list(df['H7X001']))
+                ede = ineq.kolmpollak.ede(list(df.distance), kappa = kappa, weights = list(df['H7X001']))
                 # add to list
                 new_result = [cities[state], beta, ede]
                 results.append(new_result)
@@ -96,7 +96,7 @@ def determine_kappa(data, beta, quantity):
                     kappa_data.append(i)
                 count += 1
     # calculate the kappa
-    kappa = inequality_function.calc_kappa(kappa_data, beta)
+    kappa = ineq.kolmpollak.calc_kappa(kappa_data, beta)
     return(kappa)
 
 ###

@@ -9,9 +9,9 @@ beta = -1.0
 file_name = 'chicago_{}'.format(beta)
 
 # Imports
+import inequipy as ineq
 import utils
 from config import *
-import inequality_function
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -46,7 +46,7 @@ def main():
             # drop data that has 0 weight
             df = df.iloc[np.array(df[group]) > 0].copy()
             # calculate the ede
-            ede = inequality_function.kolm_pollak_ede(list(df.distance), kappa = kappa, weights = list(df[group]))
+            ede = ineq.kolmpollak.ede(list(df.distance), kappa = kappa, weights = list(df[group]))
             # new result
             result_i = [year, group, ede]
             results.append(result_i)
@@ -95,7 +95,7 @@ def determine_kappa(data, beta, quantity, years):
                     kappa_data.append(i)
                 count += 1
     # calculate the kappa
-    kappa = inequality_function.calc_kappa(kappa_data, beta)
+    kappa = ineq.kolmpollak.calc_kappa(kappa_data, beta)
     return(kappa)
 
 ###

@@ -31,7 +31,7 @@ def determine_nearest(state):
     times = sorted(outs[services[0]].keys()) #times is just ['0'] in this initial case
     time_stamp = times[0] #because this is the initial case where everything is open
     # get the distance matrix
-    distances = pd.read_sql('SELECT * FROM distance_duration', db['con'])
+    distances = pd.read_sql('SELECT * FROM equality_index', db['con'])
     #making the id_dest column the index
     distances = distances.set_index('id_dest')
     #converts distance column from string to float

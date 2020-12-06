@@ -1,3 +1,5 @@
+import nearest_dist
+import add_socioeco
 import init_osrm
 import query
 import yaml
@@ -21,11 +23,18 @@ def single_region():
 
 def multi_regions():
     # establish config filenames
-    states = ['il','md','fl', 'co', 'mi', 'la', 'ga', 'or', 'wa', 'tx']
+    states = ['wa', 'tx','il','md','fl', 'co', 'mi', 'la', 'ga', 'or']
     for state in states:
         config_filename = state
-        # run
+        # calculate the distances
         query_osrm(config_filename)
+        # determine the nearest distance
+        logger.info('determine the nearest distance for {}'.format(state))
+        nearest_dist.determine_nearest(state)
+        # merge with socioeconomic data
+        logger.info('merge with socioeconomic data')
+        add_socioeco.import_csv(state)
+
 
 
 def query_osrm(config_filename):

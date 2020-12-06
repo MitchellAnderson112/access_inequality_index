@@ -44,14 +44,14 @@ def cfg_init(state):
         context['city'] = 'Baltimore'
         # url to the osrm routing machine
         context['osrm_url'] = 'http://localhost:6003'
-        context['services'] = ['supermarket', 'school', 'hospital', 'library']
+        context['services'] = ['supermarket']#, 'school', 'hospital', 'library']
     elif state == 'wa':
         db['name'] = 'access_wa'
         context['city_code'] = 'sea'
         context['city'] = 'Seattle'
         # url to the osrm routing machine
         context['osrm_url'] = 'http://localhost:6004'
-        context['services'] = ['supermarket', 'school', 'hospital', 'library']
+        context['services'] = ['supermarket']#, 'school', 'hospital', 'library']
     elif state == 'nc':
         db['name'] = 'access_nc'
         context['city_code'] = 'wil'
@@ -64,7 +64,7 @@ def cfg_init(state):
         context['city_code'] = 'chi'
         context['city'] = 'Chicago'
         context['osrm_url'] = 'http://localhost:6005'
-        context['services'] = ['supermarket','Market_07','Market_11','Market_14','Market_20']
+        context['services'] = ['supermarket']#,'Market_07','Market_11','Market_14','Market_20']
     elif state == 'tx':
         db['name'] = 'access_tx'
         context['city_code'] = 'hou'
@@ -112,7 +112,7 @@ def cfg_init(state):
         context['city_code'] = 'san'
         context['city'] = 'San_Francisco'
         context['osrm_url'] = 'http://localhost:6013'
-        context['services'] = ['supermarket','hospital']
+        context['services'] = ['supermarket']#,'hospital']
     # connect to database
     db['engine'] = create_engine('postgresql+psycopg2://postgres:' + db['passw'] + '@' + db['host'] + '/' + db['name'] + '?port=' + db['port'])
     db['address'] = "host=" + db['host'] + " dbname=" + db['name'] + " user=postgres password='"+ db['passw'] + "' port=" + db['port']
