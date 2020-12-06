@@ -16,10 +16,11 @@ file_name = 'food_des_{}'.format(beta)
 weight_code = 'H7X001'
 
 # Imports
+import inequalipy as ineq
 import utils
 from config import *
-import inequality_function
 import matplotlib
+import math
 from scipy import stats
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -47,31 +48,32 @@ def main():
         # invert values for atkinson
         a = list(df.distance)
         at = list(1/df.distance)
-        weight = list(df[weight_code])
+        weights = list(df[weight_code])
         # adds the city name
         results.City = city
         # adds aversion params
         results.loc[state, 'Kappa'], results.loc[state, 'Beta'] = kappa, beta
         # adds all Kolm-Pollak metrics
-        results.loc[state, 'Kolm-Pollak Index'], results.loc[state, 'Kolm-Pollak EDE'] = inequality_function.kolm_pollak_index(a, beta, kappa, weight), inequality_function.kolm_pollak_ede(a, beta, kappa, weight)
+        results.loc[state, 'Kolm-Pollak Index'], results.loc[state, 'Kolm-Pollak EDE'] = ineq.kolmpollak.index(a, beta, kappa, weights), ineq.kolmpollak.ede(a, beta, kappa, weights)
         # adds all normal (with inverted x) atkinson metrics
-        results.loc[state, 'Atkinson Index'], results.loc[state, 'Atkinson EDE'] = inequality_function.atkinson_index(at, np.absolute(beta), weight), inequality_function.atkinson_ede(at, np.absolute(beta), weight)
+        results.loc[state, 'Atkinson Index'], results.loc[state, 'Atkinson EDE'] = ineq.atkinson.index(at, np.absolute(beta), weights), ineq.atkinson.ede(at, np.absolute(beta), weights)
         # adds all adjusted atkinson metrics
-        results.loc[state, 'Atkinson Adjusted Index'], results.loc[state, 'Atkinson Adjusted EDE'] = inequality_function.atkinson_adjusted_index(a, beta, weight), inequality_function.atkinson_adjusted_ede(a, beta, weight)
+        results.loc[state, 'Atkinson Adjusted Index'], results.loc[state, 'Atkinson Adjusted EDE'] = -ineq.atkinson.index(a, beta, weights), ineq.atkinson.ede(a, beta, weights)
         # adds gini
-        results.loc[state, 'Gini Index'] = inequality_function.gini_index(a, beta, weight)
+        results.loc[state, 'Gini Index'] = ineq.gini(a, weights)
         # adds all summary stats from the distribution
         results.loc[state, 'Distribution Mean'], results.loc[state, 'Distribution Max'], results.loc[state, 'Distribution Standard Deviation'], results.loc[state, 'Distribution Coefficient of Variation'] = get_stats(df)
         # adds KP for income
         df_income = df[~np.isnan(df['JOIE001'])][['JOIE001',weight_code]]
-        weight = df_income[weight_code].tolist()
+        weights = df_income[weight_code].tolist()
         incomes = df_income['JOIE001'].tolist()
-        results.loc[state, 'Income EDE'] = inequality_function.kolm_pollak_ede(incomes, kappa=kappa_income, weight=weight)
+        results.loc[state, 'Income EDE'] = ineq.kolmpollak.ede(incomes, kappa=kappa_income, weights=weights)
 
     # plot_gini(data)
-    #plot_hist(data)
+    plot_single_hist(data)
     plot_scatter(results)
-    plot_cdf(data)
+    # plot_cdf(data)
+    plot_cdf_hist(data)
     calc_percentiles(data)
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/{}_{}.csv'.format(file_name,weight_code))
 
@@ -96,15 +98,15 @@ def get_data():
             # fig_out = '/homedirs/man112/access_inequality_index/fig/{}_distance.png'.format(state)
             # plt.savefig(fig_out, dpi=500, format='png', transparent=True, bbox_inches='tight',facecolor='w')
         # drop outliers (errors in the distance calculations) -> this would be better if it was identifying the neighbors and averaging
-            # Q1 = df.distance.quantile(0.25)
-            # Q3 = df.distance.quantile(0.75)
-            # IQR = Q3 - Q1
-            # is_outlier = (df.distance > (Q3 + 4 * IQR))
+        Q1 = df.distance.quantile(0.25)
+        Q3 = df.distance.quantile(0.75)
+        IQR = Q3 - Q1
+        is_outlier = (df.distance > (Q3 + 4 * IQR))
+        df = df[~is_outlier]
             # print('IQR: Drop {} outliers ({:.2f}%) from {}'.format(np.sum(is_outlier),np.sum(is_outlier)/len(is_outlier)*100, state))
             # is_outlier = (df.distance > df.distance.quantile(0.999))
             # print('99.9%: Drop {} outliers ({:.2f}%) from {}'.format(np.sum(is_outlier),np.sum(is_outlier)/len(is_outlier)*100, state))
             # is_outlier = (np.abs(stats.zscore(df.distance)) > 3)
-            # # df = df[~is_outlier]
             # print('Z: Drop {} outliers ({:.2f}%) from {}'.format(np.sum(is_outlier),np.sum(is_outlier)/len(is_outlier)*100, state))
         data['{}_data'.format(state)] = df # replaces the dataframe in the dictionary
     return(city, data)
@@ -122,7 +124,7 @@ def determine_kappa(data, beta, quantity):
                     kappa_data.append(i)
                 count += 1
     # calculate the kappa
-    kappa = inequality_function.calc_kappa(kappa_data, beta)
+    kappa = ineq.kolmpollak.calc_kappa(kappa_data, beta)
     return(kappa)
 
 def get_stats(df):
@@ -165,6 +167,103 @@ def plot_cdf(data = None):
     # savefig
     fig_out = '/homedirs/man112/access_inequality_index/fig/CDF_{}.pdf'.format(group)
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
+    plt.clf()
+
+
+def plot_arbitary_gini():
+    '''plots two distributions and calculates their gini'''
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import inequipy as ineq
+
+    dist_1 = np.random.normal(2,.6,10000)
+    dist_2 = np.random.normal(5,.2,10000)
+
+    # calculate the gini
+    gini_1 = ineq.gini(dist_1)
+    gini_2 = ineq.gini(dist_2)
+
+    # plot the kde (displot)
+    plt.hist(dist_1, density=True, alpha=0.3)
+    sns.ecdfplot(dist_1)
+    plt.hist(dist_2, density=True, alpha=0.3)
+    sns.ecdfplot(dist_2)
+
+    # labels
+    plt.ylabel('percentage of residents')
+    plt.xlabel('some quantity'.format())
+    plt.legend(loc='best')
+    # savefig
+    fig_out = '/homedirs/man112/access_inequality_index/fig/gini_example.pdf'
+    plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
+    print(gini_1)
+    print(gini_2)
+
+
+
+def plot_cdf_hist(data = None):
+    '''plots a cdf from a dataframe'''
+    if not data:
+        city, data = get_data()
+    for state in ['tx','wa']:
+        for group in ['H7X001']:#,'H7X002','H7X003','H7Y003']:
+            df = data['{}_data'.format(state)].copy() #gets correct dataframe
+            pop_tot = df[group].sum()
+            df = df.sort_values(by='distance')
+            df['pop_perc'] = df[group].cumsum()/pop_tot #percentage of pop
+            plt.plot(df.distance, df.pop_perc, label=state+'_'+group) #plot the cdf
+            # histogram
+            plt.hist(df.distance, weights = df[group], density=True, alpha=0.3)
+    # labels
+    plt.ylabel('% Residents')
+    plt.xlabel('Distance to the nearest supermarket (km)'.format())
+    plt.legend(loc='best')
+    # limits
+    plt.xlim([0,10])
+    plt.ylim([0,1.05])
+    # savefig
+    fig_out = '/homedirs/man112/access_inequality_index/fig/CDFhist_{}.pdf'.format(group)
+    plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
+
+def plot_single_hist(data = None):
+    '''plots a cdf from a dataframe'''
+    plt.clf()
+    if not data:
+        city, data = get_data()
+    for state in ['tx']:
+        for group in ['H7X001']:#,'H7X002','H7X003','H7Y003']:
+            df = data['{}_data'.format(state)].copy() #gets correct dataframe
+            pop_tot = df[group].sum()
+            df = df.sort_values(by='distance')
+            df['pop_perc'] = df[group].cumsum()/pop_tot #percentage of pop
+            plt.plot(df.distance, df.pop_perc, label=state+'_'+group) #plot the cdf
+            # histogram
+            plt.hist(df.distance, weights = df[group], density=True, alpha=0.3,bins=20)
+            # mean
+            mean_weighted = np.average(df.distance, weights=df[group])
+            plt.axvline(x=mean_weighted, ymin=0, ymax=1)
+            # threshold
+            plt.axvline(x=1.6, ymin=0, ymax=1)
+            # standard deviation
+            std_weighted = math.sqrt(np.average((df.distance-mean_weighted)**2, weights=df[group]))
+
+            # plt.axhline(y=.5, xmin=mean_weighted, xmax=mean_weighted+std_weighted)
+            st_xrange = [mean_weighted, mean_weighted+std_weighted]
+            print(st_xrange)
+            plt.axhline(y=.5, xmin=st_xrange[0], xmax=st_xrange[1],color='gray',linestyle='--')
+            # plt.axhline(y=.5, xmin=-2, xmax=4.4,color='gray',linestyle='--')
+    # labels
+    plt.ylabel('% Residents')
+    plt.xlabel('Distance to the nearest supermarket (km)'.format())
+    plt.legend(loc='best')
+    # limits
+    plt.xlim([0,10])
+    # plt.ylim([0,1.05])
+    # savefig
+    fig_out = '/homedirs/man112/access_inequality_index/fig/summarystatistics_tx_{}.pdf'.format(group)
+    plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
+
 
 def plot_scatter(results):
     '''
@@ -178,8 +277,8 @@ def plot_scatter(results):
     plt.ylabel(y)
     plt.xlabel('Average distance to the nearest store (km)')
     # limits
-    plt.xlim([0,3.5])
-    plt.ylim([0,0.6])
+    plt.xlim([0,3])
+    plt.ylim([0,0.5])
     # savefig
     fig_out = '/homedirs/man112/access_inequality_index/fig/scatter_gini.pdf'
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
@@ -198,7 +297,6 @@ def plot_scatter(results):
     fig_out = '/homedirs/man112/access_inequality_index/fig/scatter_income.pdf'
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
     plt.clf()
-
 
 def plot_gini(data):
     '''Takes dictionary of dataframes and plots gini on one plot'''
@@ -316,7 +414,7 @@ def plot_edes_dem():
     # get the data
     city, data = get_data() # data is a dictionary of dataframes for each state
     kappa_data = get_kappa_data(data)
-    kappa = inequality_function.calc_kappa(kappa_data, beta) # kappa is based on the distances from ALL states and the beta provided
+    kappa = ineq.calc_kappa(kappa_data, beta) # kappa is based on the distances from ALL states and the beta provided
     results = pd.DataFrame(np.nan, index=np.arange(10), columns=['State','City', 'KP_EDE_H7X001', 'KP_IE_H7X001', 'KP_EDE_H7X002', 'KP_IE_H7X002', 'KP_EDE_H7X003', 'KP_IE_H7X003','KP_EDE_H7X004', 'KP_IE_H7X004','KP_EDE_H7X005', 'KP_IE_H7X005','KP_EDE_H7Y003', 'KP_IE_H7Y003'])
     # adds the city name
     results.State = states
@@ -333,7 +431,7 @@ def plot_edes_dem():
             at = list(1/dr.distance)
             weight = list(dr[race])
             # adds all Kolm-Pollak metrics
-            results.loc[state, 'KP_EDE_{}'.format(race)], results.loc[state, 'KP_IE_{}'.format(race)] = inequality_function.kolm_pollak_ede(a, kappa = kappa, weight = weight), inequality_function.kolm_pollak_index(a, kappa = kappa, weight = weight)
+            results.loc[state, 'KP_EDE_{}'.format(race)], results.loc[state, 'KP_IE_{}'.format(race)] = ineq.kolmpollak.ede(a, kappa = kappa, weights = weights), ineq.kolmpollak.index(a, kappa = kappa, weights = weights)
 
     print(results)
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/food_des/ede_dems_{}.csv'.format(beta))
@@ -365,29 +463,7 @@ def plot_edes_dem():
     plt.savefig(fig_out, dpi=500, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
 
 
-def city_dems():
-    ''' get a table with information about the cities '''
-    city, data = get_data()
-    # initiate list
-    results = list()
-    # loop the states/cities
-    for state in states:
-        df = data['{}_data'.format(state)].copy()
-        pop_total = df['H7X001'].sum()
-        perc_white = df['H7X002'].sum()/pop_total*100
-        perc_black = df['H7X003'].sum()/pop_total*100
-        perc_nindian = df['H7X004'].sum()/pop_total*100
-        perc_asian = df['H7X005'].sum()/pop_total*100
-        perc_latin = df['H7Y003'].sum()/pop_total*100
-        new_result = [cities[state], pop_total, perc_white, perc_black, perc_nindian, perc_asian, perc_latin]
-        # add to results
-        results.append(new_result)
-    # make list to DataFrame
-    results = pd.DataFrame(results, columns=['City','Population','% White','% Black','% Am. Indian','% Asian','% Latino'])
-    results = results.round(1)
-    results = results.set_index('City')
-    results.to_csv('/homedirs/man112/access_inequality_index/data/results/food_des/city_dems.csv')
-    print(results)
+
 
 
 if __name__ == '__main__':

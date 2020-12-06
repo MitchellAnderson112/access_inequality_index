@@ -11,7 +11,7 @@
 
 import nearest_dist
 import add_socioeco
-states = ['md','fl', 'co', 'mi', 'la', 'ga', 'or', 'wa', 'tx']#, 'il']
+states = ['md','fl', 'co', 'mi', 'la', 'ga', 'or', 'wa', 'tx', 'il']
 for state in states:
     nearest_dist.determine_nearest(state)
     add_socioeco.import_csv(state)

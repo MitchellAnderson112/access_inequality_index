@@ -9,9 +9,9 @@ beta = -1.0
 file_name = 'chicago_{}'.format(beta)
 
 # Imports
+import inequipy as ineq
 import utils
 from config import *
-import inequality_function
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -46,7 +46,7 @@ def main():
             # drop data that has 0 weight
             df = df.iloc[np.array(df[group]) > 0].copy()
             # calculate the ede
-            ede = inequality_function.kolm_pollak_ede(list(df.distance), kappa = kappa, weight = list(df[group]))
+            ede = ineq.kolmpollak.ede(list(df.distance), kappa = kappa, weights = list(df[group]))
             # new result
             result_i = [year, group, ede]
             results.append(result_i)
@@ -56,8 +56,9 @@ def main():
     results.to_csv('/homedirs/man112/access_inequality_index/data/results/chicago_supermarkets_{}.csv'.format(beta))
 
     # plots
-    plot_cdf(data)
-    map_files(db, data)
+    # plot_cdf(data)
+    # map_files(db, data)
+    plot_edes_dem()
 
 
 def get_data(db, context, years):
@@ -94,7 +95,7 @@ def determine_kappa(data, beta, quantity, years):
                     kappa_data.append(i)
                 count += 1
     # calculate the kappa
-    kappa = inequality_function.calc_kappa(kappa_data, beta)
+    kappa = ineq.kolmpollak.calc_kappa(kappa_data, beta)
     return(kappa)
 
 ###
@@ -161,6 +162,30 @@ def estimate_vehicle(df):
     df['no_vehicle'] = df['no_vehicle'].astype(int)
     df['vehicle'] = df['vehicle'].astype(int)
     return df
+
+def plot_edes_dem():
+    '''plots the ede and inequality indices'''
+
+    # get the data
+    fn ='/homedirs/man112/access_inequality_index/data/results/chicago_supermarkets_{}.csv'.format(beta)
+    df = pd.read_csv(fn)
+    df['year'] = df['year'].apply(str)
+    df = df.drop(['Unnamed: 0'], axis=1)
+    df.set_index('year', inplace=True)
+    # plot on a line graph
+    ax = plt.axes()
+    plt.locator_params(axis='y', nbins=4)
+    df.groupby(['group'])['ede'].plot(ax=ax, legend=True, style='.-')
+    # results.plot(x="year", y=["KP_EDE_H7X001", "KP_EDE_H7X002", "KP_EDE_H7X003","KP_EDE_H7Y003"],ax=ax)
+    # plt.ylim([0, None])
+    # plt.xticks(range(10),results.City)
+    plt.xticks(rotation=90)
+    # plt.axhline(y = 0, color = 'black', linewidth = 1.3, alpha = .7)
+    fig_out = '/homedirs/man112/access_inequality_index/fig/chicago_optimize.pdf'
+    plt.savefig(fig_out, dpi=400, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
+    plt.show()
+    plt.clf()
+
 
 
 if __name__ == '__main__':

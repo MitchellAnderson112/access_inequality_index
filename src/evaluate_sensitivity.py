@@ -14,9 +14,9 @@ cities = {'md':'baltimore','fl':'miami','co':'denver','mi':'detroit','la':'new o
 weight_code = 'H7X001'
 
 # Imports
+import inequalipy as ineq
 import utils
 from config import *
-import inequality_function
 import matplotlib
 from tqdm import tqdm
 matplotlib.rcParams['pdf.fonttype'] = 42
@@ -36,7 +36,7 @@ def main():
         # initiate list
         results = list()
         # loop through beta values
-        for beta in tqdm(np.concatenate(([0,-0.25,-0.5,-0.75, -1.5, -2],np.logspace(0,1)*-1),axis=None)):
+        for beta in tqdm(np.concatenate(([-0.0001, -0.25,-0.5,-0.75, -1.5, -2],np.logspace(0,1)*-1),axis=None)):
             # calculate kappa from beta -- kappa is based on the distances from ALL states and the beta provided
             kappa = determine_kappa(data, beta, quantity='distance')
             # calculate the ede for each city
@@ -44,7 +44,7 @@ def main():
                 # get the data subset
                 df = data['{}_data'.format(state)].copy()
                 # calculate the values
-                ede = inequality_function.kolm_pollak_ede(list(df.distance), kappa = kappa, weight = list(df['H7X001']))
+                ede = ineq.kolmpollak.ede(list(df.distance), kappa = kappa, weights = list(df['H7X001']))
                 # add to list
                 new_result = [cities[state], beta, ede]
                 results.append(new_result)
@@ -73,6 +73,12 @@ def get_data():
         df = df.loc[df['distance'] !=0] # removes all rows with 0 distance
         df = df.loc[df['H7X001'] !=0] # removes all rows with 0 population
         df.distance = df.distance/1000 # converts from meters to Kms
+        # drop outliers (errors in the distance calculations) -> this would be better if it was identifying the neighbors and averaging
+        Q1 = df.distance.quantile(0.25)
+        Q3 = df.distance.quantile(0.75)
+        IQR = Q3 - Q1
+        is_outlier = (df.distance > (Q3 + 4 * IQR))
+        df = df[~is_outlier]
         data['{}_data'.format(state)] = df # replaces the dataframe in the dictionary
     return(city, data)
 
@@ -90,7 +96,7 @@ def determine_kappa(data, beta, quantity):
                     kappa_data.append(i)
                 count += 1
     # calculate the kappa
-    kappa = inequality_function.calc_kappa(kappa_data, beta)
+    kappa = ineq.kolmpollak.calc_kappa(kappa_data, beta)
     return(kappa)
 
 ###
@@ -103,8 +109,10 @@ def plot_aversion_continuous(results):
     ax = plt.axes()
     plt.locator_params(axis='y', nbins=4)
     results_ede.plot(ax=ax)
-    plt.ylim([0, 20])
+    plt.ylim([0, None])
     plt.gca().invert_xaxis()
+    # plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
+    #       fancybox=False, shadow=False, ncol=5)
     fig_out = '/homedirs/man112/access_inequality_index/fig/sensitivity_aversion.pdf'
     plt.savefig(fig_out, dpi=800, format='pdf', transparent=True, bbox_inches='tight',facecolor='w')
     plt.clf()
@@ -174,7 +182,9 @@ def plot_mean_ede_bycity(results, data):
     # format for plot
     results_beta = results.copy()
     results_beta['beta'] = results_beta['beta'].round(2).apply(str)
-    results_beta = results_beta[results_beta.beta.isin(['-0.25','-0.5','-0.75','-1.0','-1.5','-2.0'])]
+    results_beta = results_beta[results_beta.beta.isin(['-0.0', '-0.25','-0.5','-0.75','-1.0','-1.5','-2.0'])]
+    # import code
+    # code.interact(local=locals())
     ax = plt.axes()
     results_beta.groupby('city').plot(y='mean',x='ede',ax=ax,style='o-',label='city',linewidth=1)
     # results_beta = results_beta.pivot(index='mean', columns='city', values='ede')
