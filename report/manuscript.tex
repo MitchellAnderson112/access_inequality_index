@@ -59,16 +59,16 @@
 
 \title{Measuring inequalities in urban systems: An approach for evaluating the distribution of amenities and burdens}
 
-% \author[1,4]{T M Logan\corref{mycorrespondingauthor}}
-% \ead{tom.logan@canterbury.ac.nz}
-% \author[1,4]{M J Anderson}
-% \author[2]{T G Williams}
-% \author[3,4]{L Conrow}
+\author[1,4]{T M Logan\corref{mycorrespondingauthor}}
+\ead{tom.logan@canterbury.ac.nz}
+\author[1,4]{M J Anderson}
+\author[2]{T G Williams}
+\author[3,4]{L Conrow}
 
-% \address[1]{Civil and Natural Resources Engineering, University of Canterbury, New Zealand}
-% \address[2]{Industrial and Operations Engineering, University of Michigan, Ann Arbor, USA}
-% \address[3]{Earth and Environment, University of Canterbury, New Zealand}
-% \address[4]{The Cluster for Community and Urban Resilience, University of Canterbury, New Zealand}
+\address[1]{Civil and Natural Resources Engineering, University of Canterbury, New Zealand}
+\address[2]{Industrial and Operations Engineering, University of Michigan, Ann Arbor, USA}
+\address[3]{Earth and Environment, University of Canterbury, New Zealand}
+\address[4]{The Cluster for Community and Urban Resilience, University of Canterbury, New Zealand}
 
 \begin{abstract}
 Current approaches for measuring inequality are insufficient or unsuitable for promoting and designing equitable built environments and urban systems.
@@ -78,7 +78,7 @@ The primary advantage of the Kolm-Pollak EDE is that it can be used to evaluate 
 This is essential in urban systems as inequities can manifest through, among other things, disparate access to opportunities like public amenities and unequal exposure to burdens, such as pollution and natural hazards.
 Additionally, the Kolm-Pollak EDE can be calculated for different sociodemographic subgroups, enabling needs-based assessments to promote environmental justice.
 Thus, the Kolm-Pollak EDE presents numerous opportunities for practitioners, policymakers, and researchers concerned with advancing equity.
-We demonstrate the approach with a case study of grocery store access in ten cities across the USA and provide a Python package (\textit{inequalipy}) to enable others to use these inequality metrics.
+We demonstrate the approach with a case study of grocery store access in ten cities across the USA and provide a Python package (\href{https://pypi.org/project/inequalipy/}{inequalipy}) to enable others to use these inequality metrics.
 \end{abstract}
 
 \begin{keyword}
@@ -87,11 +87,11 @@ Equity $|$ Equality $|$ Environmental justice $|$ Urban planning $|$ Food desert
 
 \end{frontmatter}
 
-\linenumbers
+% \linenumbers
 
 \section{Introduction}
 The distribution of amenities and burdens within our communities will change as we adapt our cities to global change.
-These required changes present an opportunity to both ensure people have acceptable access to opportunities and reduce their exposure to burdens, as well as to ensure the distributions of these are fair.
+These changes present an opportunity to both ensure people have acceptable access to opportunities and reduce their exposure to burdens, as well as to ensure the distributions of these are fair.
 This fairness is critical for community trust and cohesion, which is a necessary condition for community sustainability and resilience \citep{Dempsey2011-og, Cutter2008-NJ, Logan2020-vj}.
 Thus, there is a global and time-critical imperative to improve the distribution of resources and burdens within the built environment.
 To deliver optimal and fair allocations, planners, policymakers, designers, and engineers need the ability to evaluate scenarios, through the lens of equity, in a substantive manner.
@@ -151,13 +151,12 @@ In these contexts, equity has been assessed using regression and correlation ana
 Regression and correlation approaches typically assess whether there are consistent disparities in access or distribution based on any of the socioeconomic or demographic factors considered, as applied in studies such as \cite{Schwarz2015-fs, Nesbitt2019-sk, Kim2016-mc, Williams2020-greenspace, Apparicio2007-di}.
 Map-based visualizations, such as equity mapping \citep{Talen1998-fl, Wolch2005-wz}, identify specific regions lacking in or over-exposed to the quantity in question.
 As an extension of mapping, spatial clustering and spatial autocorrelation approaches are used to assess the relationship between some quantity’s spatial distribution and other variables, often socioeconomic or demographic, in neighboring areas \citep{Talen1997-gl, Smoyer-Tomic2004-eh,Garcia2020-xt}.
-\textbf{While the Mann-Whitney U test can be applied to compare values in neighboring geographic areas when data lack normality and independence \citep{Nicholls2001-pf}, the principal approach in examining spatial patterns of distributed values is \cite{Anselin1995-fh}'s Local Indicators of Spatial Autocorrelation (LISA). 
+While the Mann-Whitney U test can be applied to compare values in neighboring geographic areas when data lack normality and independence \citep{Nicholls2001-pf}, the principal approach in examining spatial patterns of distributed values is \cite{Anselin1995-fh}'s Local Indicators of Spatial Autocorrelation (LISA). 
 Maps, or the mapped results of LISA, are essential tools that enable decision-makers and residents to understand the geographic arrangement of resources and allow them to visualize how decisions influence disparities \citep{Talen1998-fl}.
 These approaches highlight relationships between various factors and spatial arrangements that may influence inequity, aiming to determine where significant patterns of need intersect with significant patterns of access. 
 Mapping LISA results allows clusters (e.g., high values with high neighboring values) and outliers (e.g., high values with low neighboring values) to be interpreted within the context of the topic under study, and their primary utility is in identifying those locations. 
 LISA are a decomposition of global spatial autocorrelation statistics, where meaningful patterns can be obscured within the global measure of overall spatial autocorrelation \citep{Talen1998-mk}. 
 The LISA value for each area measures its contribution to the global counterpart, though neither is necessarily an evaluation of the overall level of inequity in the study area.
-}
 
 Quantitative summary statistics describe the statistical distribution, and therefore overall inequality.
 % , however, these existing measures can obscure disparities or might be unsuitable in planning contexts \citep{Kolak2018-az,Logan2019-fr}.
@@ -177,7 +176,7 @@ It was first used in an urban planning context to assess equality in accessing s
     \label{fig:current_metrics}
 \end{figure*}
 
-\textbf{Despite their widespread use and simplicity, summary statistics can be inappropriate in urban contexts as some do not reflect the severity of the worst-off individuals, are relative (scale independent) measures, and/or embody implicit assumptions concerning distributional justice. 
+Despite their widespread use and simplicity, summary statistics can be inappropriate in urban contexts as some do not reflect the severity of the worst-off individuals, are relative (scale independent) measures, and/or embody implicit assumptions concerning distributional justice. 
 To demonstrate these limitations, consider the distance that Houston (Texas) residents live to their nearest grocery store (Figure \ref{fig:current_metrics}a). 
 To begin with, measures of central location (e.g., the mean) or position (e.g., the percentage of people that live within some distance) can ignore the tail-end of the distribution: the worst-off individuals (Figure \ref{fig:current_metrics}a). 
 Alternatively, measures of dispersion (e.g., standard deviation, Gini) are scale-independent, meaning that they are independent of the distance residents live from their nearest store (Figure \ref{fig:current_metrics}b).
@@ -185,7 +184,7 @@ Considering relative (scale independent) values may be useful when comparing the
 In such contexts, it is plausible that a less equal distribution may be more desirable in some instances.
 One such instance is a hazard context: consider the situation (1) where everyone is equally majorly affected by an event, and contrast this with the situation (2) where some residents are not impacted but others are slightly affected.
 Situation (2) is likely preferable, even though it is less equal.
-An additional limitation of ‘positive’ measures (cf. normative measures) such as the Gini coefficient and CV is that they involve implicit assumptions about the desirability of transfers and the aversion to inequality \citep{Maguire2011-fi, Atkinson1970-mr, Adger1997-tu}.}
+An additional limitation of ‘positive’ measures (cf. normative measures) such as the Gini coefficient and CV is that they involve implicit assumptions about the desirability of transfers and the aversion to inequality \citep{Maguire2011-fi, Atkinson1970-mr, Adger1997-tu}.
 % Essentially, these statistical measures of dispersion do not prioritize improving the state of the ‘poorest’ individuals.
 % are unsuitable or unsatisfactory for measuring equality as a desirable concept 
 
@@ -196,7 +195,7 @@ An EDE is analogous to the risk premium or certainty equivalent from decision sc
 Unlike ‘positive’ summary statistics, however, the EDE is based on a subjective parameter that represents aversion to inequality and is how welfare is determined.
 The use of this parameter means that the value judgment regarding the importance of inequality shifts from being implicit, as it is for the Gini coefficient and coefficient of variation, to being explicit and user-defined.
 While some people may be uncomfortable with the subjectivity of a user-defined parameter, the alternative measures (such as the Gini) each carry implicit value judgments as to the importance of and aversion to inequality.
-\textbf{Instead, using an aversion parameter can accommodate different views concerning distributional justice and enables us to evaluate how sensitive the rank order of alternative interventions is to that aversion.}
+Instead, using an aversion parameter can accommodate different views concerning distributional justice and enables us to evaluate how sensitive the rank order of alternative interventions is to that aversion.
 That is, as \cite{Atkinson1970-mr} points out, any evaluation of inequality involves judgments relating to social welfare---a normative approach enables us to explore the effect of these judgments.
 
 While Atkinson's approach has proven useful for evaluating the inequality of income, it is unsuitable for distributions of undesirable quantities \citep{Cox2012-lg, Sheriff2020-ge, Maguire2011-fi, Fann2011-hd} — a crucial question of planners.
@@ -266,7 +265,7 @@ Note that, unlike other inequality indices, this is an absolute index rather tha
 Therefore the value is not constrained between 0 and 1.
 While a relative index can be useful for some instances, an absolute inequality index provides information in situations where the scale matters --- common in urban planning.
 
-As a complement to the paper, we created the Python library ``inequalipy" (available on pip) that provides publicly available Python functions for calculating inequality metrics for a distribution. The code for the analysis is available on GitHub: \url{https://github.com/redacted-for-review}.
+As a complement to the paper, we created the Python library ``inequalipy" (available on \href{https://pypi.org/project/inequalipy/}{pip}) that provides publicly available Python functions for calculating inequality metrics for a distribution. The code for the analysis is available on GitHub: \url{https://github.com/MitchellAnderson112/access_inequality_index}. Additionally, R code is included in \autoref{app:r-code}.
 
 
 \section{Criteria for an urban inequality measure}
@@ -501,7 +500,7 @@ Given that 1 mile (1.6km) is the common measure for a food desert, and that our 
     \includegraphics[width=\linewidth]{report/fig/fig4.pdf}
     \caption{
     Evaluating the proximity (penalized by inequality) of different demographic and socioeconomic groups to their nearest grocery store in ten USA cities. 
-    An interactive plot is available at [redacted for review].
+    An interactive plot is available at \url{https://apps.urutau.co.nz/equality-measure}.
     }
     \label{fig:subgroup}
 \end{figure*}
@@ -616,11 +615,136 @@ Policy and planning to address food-deserts and other service-deserts could fost
 As demonstrated in our case studies, the Kolm-Pollak EDE is invaluable in equipping planners and decision-makers with the evidence needed when advocating for accessible, sustainable, and just societies.
 
 \section{Acknowledgments}
-% MJA was funded by the Department of Civil and Natural Resources Engineering at the University of Canterbury, this support is much appreciated.
+MJA was funded by the Department of Civil and Natural Resources Engineering at the University of Canterbury, this support is much appreciated.
+TGW acknowledges the support of a University of Michigan Rackham PreDoctoral Fellowship.
 
 \bibliography{mybibfile}
 
+\clearpage
+\newpage
+\linenumbers
+\appendix
+%%%%%% %%%%%%%%%% %%%%%%%%%% %%%%%%%%% %%%%% SUPPLEMENTAL %%%%%%%%% %%%%%%%%%% %%%%%%%% %%%%%%%%
 
+\section{Code for R}
+\label{app:r-code}
+This code is available at \href{https://github.com/urutau-nz/kolmpollak-R}{https://github.com/urutau-nz/kolmpollak-R}.
+
+\begin{lstlisting}[language=R]
+ede <- function(a, epsilon = NULL, kappa = NULL, weights = NULL)
+{
+# Compute the Kolm-Pollak Equally-Distributed Equivalent (EDE).
+# The Kolm-Pollak EDE and Index are suitable for distributions of desirable and
+# undesirable quantities. That is, a desirable quantity (like income) is where
+# having more of the quantity is desirable; compared with an undesirable
+# quantity like health risk, where less is better.
+#
+# Parameters
+# ----------
+# a : array_like
+# 1-D array containing the values of the distribution.
+# epsilon : float
+# The inequality aversion parameter from the Atkinson formulae.
+# If epsilon > 0 then the quantity is desirable (more is better).
+# kappa : float
+# The inequality aversion parameter from the Kolm-Pollak formulae.
+# If kappa > 0 then the quantity is desirable (more is better).
+# weights : array_like, optional
+# 1-D array of integer weights associated with the values in `a`. Each value in
+# `a` contributes to the average according to its associated weight.
+# If `weights=None`, then all data in `a` are assumed to have a
+# weight equal to one.
+#
+# Returns
+# -------
+# value : float
+# Returns the Kolm-Pollak Equally-Distributed Equivalent of the distribution provided.
+  if (is.null(kappa)){
+    if (is.null(epsilon)){
+      stop("you must provide either an epsilon or kappa aversion parameter")
+    }
+    kappa <- calc_kappa(a, epsilon, weights)
+  }
+  if (is.null(weights)){
+    ede_sum <- sum(exp(a*-kappa))
+    N <- length(a)
+  } else{
+    ede_sum <- sum(exp(a*-kappa) * weights)
+    N <- sum(weights)
+  }
+  (-1 / kappa) * log(ede_sum / N)
+}
+
+index <- function(a, epsilon = NULL, kappa = NULL, weights = NULL)
+{
+# Compute the Kolm-Pollak Index.
+# The Kolm-Pollak EDE and Index are suitable for distributions of desirable and
+# undesirable quantities. That is, a desirable quantity (like income) is where
+# having more of the quantity is desirable; compared with an undesirable
+# quantity like health risk, where less is better.
+#
+# Parameters
+# ----------
+# a : array_like
+# 1-D array containing the values of the distribution.
+# epsilon : float
+# The inequality aversion parameter from the Atkinson formulae.
+# If epsilon > 0 then the quantity is desirable (more is better).
+# kappa : float
+# The inequality aversion parameter from the Kolm-Pollak formulae.
+# If kappa > 0 then the quantity is desirable (more is better).
+# weights : array_like, optional
+# 1-D array of integer weights associated with the values in `a`. Each value in
+# `a` contributes to the average according to its associated weight.
+# If `weights=None`, then all data in `a` are assumed to have a
+# weight equal to one.
+#
+# Returns
+# -------
+# value : float
+# Returns the Kolm-Pollak Index of the distribution provided.
+  if (is.null(weights)){
+    x_mean <- mean(a)
+  } else{
+    x_mean <- sum(a*weights)/sum(weights)
+  }
+  ede(a, epsilon = epsilon, kappa = kappa, weights = weights) - x_mean
+}
+
+calc_kappa <- function(a, epsilon, weights = NULL)
+{
+# Converts the inequality aversion parameter used in Atkinson's formulae (epsilon)
+# into the form for the Kolm-Pollak formulae (kappa).
+# If epsilon > 0 then the quantity is desirable (more is better).
+#
+# Parameters
+# ----------
+# a : array_like
+# 1-D array containing the values of the distribution.
+# epsilon : float
+# The inequality aversion parameter from the Atkinson formulae.
+# If epsilon > 0 then the quantity is desirable (more is better).
+# weights : array_like, optional
+# 1-D array of integer weights associated with the values in `a`. Each value in
+# `a` contributes to the average according to its associated weight.
+# If `weights=None`, then all data in `a` are assumed to have a
+# weight equal to one.
+#
+# Returns
+# -------
+# value : float
+# Returns the inequality aversion parameter for the Kolm-Pollak formulae
+  if (is.null(weights)){
+    x_sum <- sum(a)
+    x_sq_sum <- sum(a**2)
+  } else {
+    x_sum <- sum(a * weights)
+    x_sq_sum <- sum((a**2) * weights)
+  }
+  epsilon * (x_sum / x_sq_sum)
+}
+
+\end{lstlisting}
 
 \end{document}
 
